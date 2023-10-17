@@ -10,11 +10,11 @@ let to_string t = "X: " ^ Float.to_string (x t) ^
   ", Z: " ^ Float.to_string (z t) ^
   ", W: " ^ Float.to_string (w t)
 
-let equal t1 t2 = 
-  Float.equal t1.x t2.x && 
-  Float.equal t1.y t2.y && 
-  Float.equal t1.z t2.z && 
-  Float.equal t1.w t2.w
+let equal t1 t2 = let aux n1 n2 = (Float.sub n1 n2) < Float.epsilon in 
+  aux t1.x t2.x &&
+  aux t1.y t2.y &&
+  aux t1.z t2.z &&
+  aux t1.w t2.w
 
 let init (x, y, z, w) = { x = x; y = y; z = z; w = w}
 

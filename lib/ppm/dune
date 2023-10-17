@@ -1,0 +1,5 @@
+(library
+ (name ppm)
+ (libraries tuple color canvas)
+ (inline_tests)
+ (preprocess (pps ppx_inline_test)))
