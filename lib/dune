@@ -1,5 +1,11 @@
 (library
  (name ray_lib)
- (libraries tuple projectile environment color)
+ (libraries 
+  tuple 
+  projectile 
+  environment 
+  color
+  canvas
+  ppm)
  (inline_tests)
  (preprocess (pps ppx_inline_test)))
