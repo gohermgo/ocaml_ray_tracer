@@ -1,0 +1,5 @@
+(library
+ (name projectile)
+ (libraries tuple)
+ (inline_tests)
+ (preprocess (pps ppx_inline_test)))

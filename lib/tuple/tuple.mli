@@ -1,5 +1,12 @@
 type t = { x: float; y: float; z: float; w: float }
 
+val x: t -> float
+val y: t -> float
+val z: t -> float
+val w: t -> float
+
+val to_string: t -> string
+
 val equal: t -> t -> bool
 
 val init: (float * float * float * float) -> t

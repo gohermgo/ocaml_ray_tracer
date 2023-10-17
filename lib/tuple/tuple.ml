@@ -1,5 +1,15 @@
 type t = { x: float; y: float; z: float; w: float }
 
+let x t = t.x
+let y t = t.y
+let z t = t.z
+let w t = t.w
+
+let to_string t = "X: " ^ Float.to_string (x t) ^ 
+  ", Y: " ^ Float.to_string (y t) ^ 
+  ", Z: " ^ Float.to_string (z t) ^
+  ", W: " ^ Float.to_string (w t)
+
 let equal t1 t2 = 
   Float.equal t1.x t2.x && 
   Float.equal t1.y t2.y && 
