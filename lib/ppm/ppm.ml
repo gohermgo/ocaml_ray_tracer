@@ -10,7 +10,14 @@ let pixel_to_ppm ~pixel_ref:p_r = let pixel = !p_r in
 let canvas_row_to_ppm ~row_ref:r_r = let rec aux = function
   | [] -> []
   | pixel_ref :: t -> pixel_to_ppm ~pixel_ref:pixel_ref :: aux t in
-  String.trim (List.fold_left (^) "" (aux r_r))
+  let row_str = String.trim (List.fold_left (^) "" (aux r_r)) in
+  let row_str_len = String.length row_str in
+  if row_str_len >= 70 then
+    let new_line_idx = String.rindex_from row_str 70 ' ' in
+    let str_p1 = String.sub row_str 0 new_line_idx in
+    let str_p2 = String.sub row_str (new_line_idx + 1) ((row_str_len - 1) - new_line_idx) in
+    str_p1 ^ "\n" ^ str_p2
+  else row_str
 
 let ppm_header c = "P3\n" ^ Int.to_string (Canvas.width c) ^ " " ^ Int.to_string (Canvas.height c) ^ "\n" ^ "255" ^ "\n"
 
@@ -45,8 +52,21 @@ let%test "Scenario: Constructing the PPM pixel data" = let c = Canvas.init ~widt
   String.equal (List.nth ppm 4) "0 0 0 0 0 0 0 128 0 0 0 0 0 0 0" &&
   String.equal (List.nth ppm 5) "0 0 0 0 0 0 0 0 0 0 0 0 0 0 255"
 
+let%test "Scenario: Splitting long lines in PPM files" = let c = Canvas.init ~width:10 ~height:2 in 
+  let rec write_pixel_row y = function
+    | x when x < (Canvas.width c) -> Canvas.write_pixel c ~x_idx:x ~y_idx:y ~color:(Color.init (1.0, 0.8, 0.6)); write_pixel_row y (x + 1)
+    | _ -> () in
+  let rec aux = function
+    | y when y < (Canvas.height c) -> write_pixel_row y 0; aux (y + 1)
+    | _ -> () in
+  let () = aux 0 in
+  let ppm = String.split_on_char '\n' (canvas_to_ppm ~canvas:c) in
+  String.equal (List.nth ppm 3) "255 204 153 255 204 153 255 204 153 255 204 153 255 204 153 255 204" &&
+  String.equal (List.nth ppm 4) "153 255 204 153 255 204 153 255 204 153 255 204 153" &&
+  String.equal (List.nth ppm 5) "255 204 153 255 204 153 255 204 153 255 204 153 255 204 153 255 204" &&
+  String.equal (List.nth ppm 6) "153 255 204 153 255 204 153 255 204 153 255 204 153" 
+  
 let%test "Scenario: PPM file are terminated by a newline character" = let c = Canvas.init ~width:5 ~height:3 in
   let ppm = canvas_to_ppm ~canvas: c in
   let char_list = Base.String.to_list ppm in
   Char.equal '\n' (List.hd (List.rev char_list))
-
