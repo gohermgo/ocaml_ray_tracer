@@ -1,4 +1,6 @@
 type t = float array array
+let f_equal x y = let abs_diff = Float.abs(Float.sub x y) in
+  abs_diff < Float.epsilon
 
 let init row_count column_count = Array.make_matrix column_count row_count 0.0
 
@@ -30,6 +32,8 @@ let%test "Scenario: A 3x3 matrix ought to be representable" = let matrix = init 
   Float.equal (matrix.(0).(0)) (-3.0) &&
   Float.equal (matrix.(1).(1)) (-2.0) &&
   Float.equal (matrix.(2).(2)) (1.0)
+
+let dim_of m = (Array.length m, Array.length m.(0))
 
 let row_equal = Array.for_all2 (fun e1 e2 -> Float.equal e1 e2)
 
@@ -199,7 +203,7 @@ let transpose m = let nrows = Array.length m in
   done in
   res
 
-let%test "Transposing a matrix" = let m = init 4 4 in
+let%test "Scenario: Transposing a matrix" = let m = init 4 4 in
   let () = m.(0) <- [|0.0; 9.0; 3.0; 0.0|] in
   let () = m.(1) <- [|9.0; 8.0; 0.0; 8.0|] in
   let () = m.(2) <- [|1.0; 8.0; 5.0; 3.0|] in
@@ -209,6 +213,151 @@ let%test "Transposing a matrix" = let m = init 4 4 in
   row_equal m_t.(1) [|9.0; 8.0; 8.0; 0.0|] &&
   row_equal m_t.(2) [|3.0; 0.0; 5.0; 5.0|] &&
   row_equal m_t.(3) [|0.0; 8.0; 3.0; 8.0|] 
-let%test "Transposing the identity matrix" = let m = ident 4 in
+let%test "Scenario: Transposing the identity matrix" = let m = ident 4 in
   let m_t = transpose m in
   equal m_t m
+
+let det_2 m = let (nrows, ncols) = dim_of m in
+  let () = assert (nrows == 2 && ncols == 2) in
+  let prod1 = Float.mul m.(0).(0) m.(1).(1) in
+  let prod2 = Float.mul m.(0).(1) m.(1).(0) in
+  Float.sub prod1 prod2
+let%test "Scenario: Calculating the determinant of a 2x2 matrix" = let m = init 2 2 in
+  let () = m.(0) <- [|1.0; 5.0|] in
+  let () = m.(1) <- [|-3.0; 2.0|] in
+  f_equal (det_2 m) 17.0
+
+let submat m omit_row omit_col = let (nrows, ncols) = dim_of m in
+  let m_r = init (nrows - 1) (ncols - 1) in
+  let col_aux row sub_row = for col = 0 to ncols - 1 do
+    (* Do nothing on omitted col *)
+    if col == omit_col then ()
+    else
+      (* Shift sub col index back, after omitted col *)
+      let sub_col = if col < omit_col then col else col - 1 in
+      m_r.(sub_row).(sub_col) <- m.(row).(col)
+  done in
+  let () = for row=0 to nrows - 1 do
+    (* Do nothing on omitted row *)
+    if row == omit_row then ()
+    else
+      (* Shift sub row index back, after the omitted row *)
+      let sub_row = if row < omit_row then row else row - 1 in
+      col_aux row sub_row
+  done in
+  m_r
+
+let%test "Scenario: A submatrix of a 3x3 matrix is a 2x2 matrix" = let m = init 3 3 in
+  let () = m.(0) <- [|1.0; 5.0; 0.0|] in    
+  let () = m.(1) <- [|-3.0; 2.0; 7.0|] in
+  let () = m.(2) <- [|0.0; 6.0; -3.0|] in
+  let m_s = submat m 0 2 in
+  let (nrows, ncols) = (Array.length m_s, Array.length m_s.(0)) in
+  nrows == 2 && ncols == 2 &&
+  row_equal m_s.(0) [|-3.0; 2.0|] &&
+  row_equal m_s.(1) [|0.0; 6.0|]
+let%test "Scenario: A submatrix of a 3x3 matrix is a 2x2 matrix" = let m = init 4 4 in
+  let () = m.(0) <- [|-6.0; 1.0; 1.0; 6.0|] in    
+  let () = m.(1) <- [|-8.0; 5.0; 8.0; 6.0|] in
+  let () = m.(2) <- [|-1.0; 0.0; 8.0; 2.0|] in
+  let () = m.(3) <- [|-7.0; 1.0; -1.0; 1.0|] in
+  let m_s = submat m 2 1 in
+  let (nrows, ncols) = (Array.length m_s, Array.length m_s.(0)) in
+  nrows == 3 && ncols == 3 &&
+  row_equal m_s.(0) [|-6.0; 1.0; 6.0|] &&
+  row_equal m_s.(1) [|-8.0; 8.0; 6.0|] &&
+  row_equal m_s.(2) [|-7.0; -1.0; 1.0|]
+
+let minor_3 m row_idx col_idx = let (nrows, ncols) = dim_of m in
+  let () = assert (nrows == 3 && ncols == 3) in 
+  let m_s = submat m row_idx col_idx in
+  det_2 m_s
+
+let%test "Scenario: Calculating a minor of a 3x3 matrix" = let m = init 3 3 in
+  let () = m.(0) <- [|3.0; 5.0; 0.0|] in
+  let () = m.(1) <- [|2.0; -1.0; -7.0|] in
+  let () = m.(2) <- [|6.0; -1.0; 5.0|] in
+  let m_s = submat m 1 0 in
+  f_equal (det_2 m_s) 25.0 && f_equal (minor_3 m 1 0) 25.0
+
+let cofactor_3 m row_idx col_idx = let (nrows, ncols) = dim_of m in
+  let () = assert (nrows == 3 && ncols == 3) in
+  let should_negate = (row_idx + col_idx) mod 2 != 0 in
+  let m_minor = minor_3 m row_idx col_idx in
+  let res = if should_negate
+  then Float.neg m_minor
+  else m_minor in
+  res
+
+let%test "Scenario: Calculating a cofactor of a 3x3 matrix" = let m = init 3 3 in
+  let () = m.(0) <- [|3.0; 5.0; 0.0|] in
+  let () = m.(1) <- [|2.0; -1.0; -7.0|] in
+  let () = m.(2) <- [|6.0; -1.0; 5.0|] in
+  f_equal (minor_3 m 0 0) (-12.0) &&
+  f_equal (cofactor_3 m 0 0)(-12.0) &&
+  f_equal (minor_3 m 1 0) (25.0) &&
+  f_equal (cofactor_3 m 1 0)(-25.0)
+
+let det_3 m = let (nrows, ncols) = dim_of m in
+  let () = assert (nrows == 3 && ncols == 3) in
+  let det_res = ref 0.0 in
+  let () = for col = 0 to ncols - 1 do
+    (*let cofactor = cofactor_3 m 0 col in*)
+    let new_det = !det_res +. m.(0).(col) *. (cofactor_3 m 0 col) in
+    det_res := new_det
+  done in !det_res
+
+let%test "Calculating the determinant of a 3x3 matrix" = let m = init 3 3 in
+  let () = m.(0) <- [|1.0; 2.0; 6.0|] in
+  let () = m.(1) <- [|-5.0; 8.0; -4.0|] in
+  let () = m.(2) <- [|2.0; 6.0; 4.0|] in
+  f_equal (cofactor_3 m 0 0) 56.0 &&
+  f_equal (cofactor_3 m 0 1) 12.0 &&
+  f_equal (cofactor_3 m 0 2) (-46.0) &&
+  f_equal (det_3 m) (-196.0)
+
+let minor m row_idx col_idx = let (nrows, ncols) = dim_of m in
+  let () = assert (nrows == ncols) in
+  if nrows == 3
+  then minor_3 m row_idx col_idx
+  else
+    let m_s = submat m row_idx col_idx in
+    det_3 m_s
+
+let cofactor m row_idx col_idx = let (nrows, ncols) = dim_of m in
+  let () = assert (nrows == ncols && nrows > 2) in
+  if nrows == 3 
+  then cofactor_3 m row_idx col_idx
+  else
+    let should_negate = (row_idx + col_idx) mod 2 != 0 in
+    let m_minor = (minor m row_idx col_idx) in
+    if should_negate
+    then Float.neg m_minor
+    else m_minor
+
+let det m = let (nrows, ncols) = dim_of m in
+  let () = assert (nrows == ncols) in
+  (* We can assume nrows == ncols here *)
+  if nrows == 2  
+  then det_2 m
+  else if nrows == 3
+  then det_3 m
+  else
+    let det_res = ref 0.0 in
+    let () = for col = 0 to ncols - 1 do
+      let cofactor = cofactor m 0 col in
+      let new_det = !det_res +. m.(0).(col) *. cofactor in
+      det_res := new_det
+    done in
+    !det_res
+
+let%test "Calculating the determinant of a 4x4 matrix" = let m = init 4 4 in
+  let () = m.(0) <- [|-2.0; -8.0; 3.0; 5.0|] in
+  let () = m.(1) <- [|-3.0; 1.0; 7.0; 3.0|] in
+  let () = m.(2) <- [|1.0; 2.0; -9.0; 6.0|] in
+  let () = m.(3) <- [|-6.0; 7.0; 7.0; -9.0|] in
+  f_equal (cofactor m 0 0) 690.0 &&
+  f_equal (cofactor m 0 1) 447.0 &&
+  f_equal (cofactor m 0 2) 210.0 &&
+  f_equal (cofactor m 0 3) 51.0 &&
+  f_equal (det m) (-4071.0)
