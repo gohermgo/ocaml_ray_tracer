@@ -31,19 +31,13 @@ let%test "Scenario: A 3x3 matrix ought to be representable" = let matrix = init 
   Float.equal (matrix.(1).(1)) (-2.0) &&
   Float.equal (matrix.(2).(2)) (1.0)
 
-let print m = let nrows = Array.length m in
-  let ncols = Array.length m.(0) in
-  for i=0 to nrows - 1 do
-    for j=0 to ncols - 1 do
-      print_float m.(i).(j)
-    done
-  done  
+let row_equal = Array.for_all2 (fun e1 e2 -> Float.equal e1 e2)
 
 let equal m1 m2 = if (Array.length m1) != (Array.length m2)
   then false
   else 
     let row_length = (Array.length m1) in
-    let row_equal r1 r2 = Array.for_all2 (fun e1 e2 -> Float.equal e1 e2) r1 r2 in
+    (*let row_equal r1 r2 = Array.for_all2 (fun e1 e2 -> Float.equal e1 e2) r1 r2 in*)
     let rec aux = function
       | x when x < row_length -> let not_equal = not (row_equal m1.(x) m2.(x)) in
         if not_equal
@@ -75,6 +69,27 @@ let%test "Scenario: Matrix equality with different matrices" = let m1 = init 4 4
   let () = m2.(2) <- [|8.0; 7.0; 6.0; 5.0|] in
   let () = m2.(3) <- [|4.0; 3.0; 2.0; 1.0|] in
   not (equal m1 m2)
+
+let ident dim = let m = init dim dim in
+  let () = for i=0 to dim - 1 do
+    m.(i).(i) <- 1.0
+  done in
+  m
+
+let%test "Scenario: Constructing and inspecting a 4x4 identity matrix" = let m = ident 4 in
+  row_equal m.(0) [|1.0; 0.0; 0.0; 0.0;|] &&
+  row_equal m.(1) [|0.0; 1.0; 0.0; 0.0;|] &&
+  row_equal m.(2) [|0.0; 0.0; 1.0; 0.0;|] &&
+  row_equal m.(3) [|0.0; 0.0; 0.0; 1.0;|] 
+
+let print m = let nrows = Array.length m in
+  let ncols = Array.length m.(0) in
+  for i=0 to nrows - 1 do
+    for j=0 to ncols - 1 do
+      print_float m.(i).(j)
+    done
+  done  
+
 
 let get_col matrix col_idx = let row_length = Array.length matrix in
   Array.init row_length (fun row_idx -> matrix.(row_idx).(col_idx))
@@ -131,7 +146,19 @@ let%test "Scenario: Multiplying two matrices" = let m1 = init 4 4 in
     let () = expected.(3) <- [|16.0; 26.0; 46.0; 42.0|] in
     equal m expected
 
-let mul_tuple t m = let nrows = Array.length m in
+let%test "Scenario: Multiplying a matrix by the identity matrix" = let m = init 4 4 in
+  let () = m.(0) <- [|0.0; 1.0; 2.0; 4.0|] in
+  let () = m.(1) <- [|1.0; 2.0; 4.0; 8.0|] in
+  let () = m.(2) <- [|2.0; 4.0; 8.0; 16.0|] in
+  let () = m.(3) <- [|4.0; 8.0; 16.0; 32.0|] in
+  let res = mul m (ident 4) in
+  if Option.is_none res
+  then false
+  else
+    let res = Option.get res in
+    equal m res
+
+let mul_tuple m t = let nrows = Array.length m in
   let ncols = Array.length m.(0) in
   if (ncols != 4) || (nrows != 4)
   then None
@@ -148,10 +175,40 @@ let%test "Scenario: A matrix multiplied by a tuple" = let m = init 4 4 in
   let () = m.(2) <- [|8.0; 6.0; 4.0; 1.0|] in
   let () = m.(3) <- [|0.0; 0.0; 0.0; 1.0|] in
   let t = Tuple.init (1.0, 2.0, 3.0, 1.0) in
-  let res = mul_tuple t m in
+  let res = mul_tuple m t  in
   if Option.is_none res
   then false
   else
     let res = Option.get res in
     Tuple.equal res (Tuple.init (18.0, 24.0, 33.0, 1.0))
 
+let%test "Scenario: Multiplying the identity matrix by a tuple" = let t = Tuple.init (1.0, 2.0, 3.0, 4.0) in
+  let res = mul_tuple (ident 4) t in
+  if Option.is_none res
+  then false
+  else
+    let res = Option.get res in
+    Tuple.equal res t
+  
+let transpose m = let nrows = Array.length m in
+  let ncols = Array.length m.(0) in
+  (* Note the inversion in the next statement *)
+  let res = init ncols nrows in
+  let () = for i=0 to ncols - 1 do
+    res.(i) <- get_col m i
+  done in
+  res
+
+let%test "Transposing a matrix" = let m = init 4 4 in
+  let () = m.(0) <- [|0.0; 9.0; 3.0; 0.0|] in
+  let () = m.(1) <- [|9.0; 8.0; 0.0; 8.0|] in
+  let () = m.(2) <- [|1.0; 8.0; 5.0; 3.0|] in
+  let () = m.(3) <- [|0.0; 0.0; 5.0; 8.0|] in
+  let m_t = transpose m in
+  row_equal m_t.(0) [|0.0; 9.0; 1.0; 0.0|] &&
+  row_equal m_t.(1) [|9.0; 8.0; 8.0; 0.0|] &&
+  row_equal m_t.(2) [|3.0; 0.0; 5.0; 5.0|] &&
+  row_equal m_t.(3) [|0.0; 8.0; 3.0; 8.0|] 
+let%test "Transposing the identity matrix" = let m = ident 4 in
+  let m_t = transpose m in
+  equal m_t m
