@@ -8,7 +8,7 @@ let w t = t.w
 let to_string t = "X: " ^ Float.to_string (x t) ^ 
   ", Y: " ^ Float.to_string (y t) ^ 
   ", Z: " ^ Float.to_string (z t) ^
-  ", W: " ^ Float.to_string (w t) ^ "\n"
+  ", W: " ^ Float.to_string (w t)
 let abs_diff x y = Float.abs (Float.sub x y)
 let f_equal x y = (abs_diff x y) < 0.0001
 let equal t1 t2 = f_equal (x t1) (x t2) && f_equal (y t1) (y t2) && f_equal (z t1) (z t2) && f_equal (w t1) (w t2)

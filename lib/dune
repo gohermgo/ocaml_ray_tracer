@@ -6,6 +6,8 @@
   environment 
   color
   canvas
-  ppm)
+  ppm
+  matrix
+  transformation)
  (inline_tests)
  (preprocess (pps ppx_inline_test)))
