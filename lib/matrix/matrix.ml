@@ -27,9 +27,9 @@ let%test "Scenario: A 2x2 matrix ought to be representable" = let matrix = init 
   Float.equal (matrix.(1).(1)) (-2.0)
 
 let%test "Scenario: A 3x3 matrix ought to be representable" = let matrix = init 3 3 in
-  let () = matrix.( 0) <- [|-3.0; 5.0; 0.0|] in
-  let () = matrix.( 1) <- [|1.0; -2.0; -7.0|] in
-  let () = matrix.( 2) <- [|0.0; 1.0; 1.0|] in
+  let () = matrix.(0) <- [|-3.0; 5.0; 0.0|] in
+  let () = matrix.(1) <- [|1.0; -2.0; -7.0|] in
+  let () = matrix.(2) <- [|0.0; 1.0; 1.0|] in
   Float.equal (matrix.(0).(0)) (-3.0) &&
   Float.equal (matrix.(1).(1)) (-2.0) &&
   Float.equal (matrix.(2).(2)) (1.0)

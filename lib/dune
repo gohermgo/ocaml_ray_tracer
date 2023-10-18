@@ -8,6 +8,8 @@
   canvas
   ppm
   matrix
-  transformation)
+  transformation
+  geometry
+  sphere)
  (inline_tests)
  (preprocess (pps ppx_inline_test)))

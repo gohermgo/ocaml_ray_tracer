@@ -16,6 +16,7 @@ let equal t1 t2 = f_equal (x t1) (x t2) && f_equal (y t1) (y t2) && f_equal (z t
 let init (x, y, z, w) = { x = x; y = y; z = z; w = w}
 
 let point (x, y, z) = init (x, y, z, 1.0)
+let point_origin = point (0.0, 0.0, 0.0)
 
 let is_point p = Float.equal p.w 1.0
 

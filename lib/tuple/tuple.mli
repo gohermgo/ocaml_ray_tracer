@@ -12,6 +12,7 @@ val equal: t -> t -> bool
 val init: (float * float * float * float) -> t
 
 val point: (float * float * float) -> t
+val point_origin: t
 
 val is_point: t -> bool
 
