@@ -8,13 +8,10 @@ let w t = t.w
 let to_string t = "X: " ^ Float.to_string (x t) ^ 
   ", Y: " ^ Float.to_string (y t) ^ 
   ", Z: " ^ Float.to_string (z t) ^
-  ", W: " ^ Float.to_string (w t)
-
-let equal t1 t2 = let aux n1 n2 = (Float.sub n1 n2) < Float.epsilon in 
-  aux t1.x t2.x &&
-  aux t1.y t2.y &&
-  aux t1.z t2.z &&
-  aux t1.w t2.w
+  ", W: " ^ Float.to_string (w t) ^ "\n"
+let abs_diff x y = Float.abs (Float.sub x y)
+let f_equal x y = (abs_diff x y) < 0.0001
+let equal t1 t2 = f_equal (x t1) (x t2) && f_equal (y t1) (y t2) && f_equal (z t1) (z t2) && f_equal (w t1) (w t2)
 
 let init (x, y, z, w) = { x = x; y = y; z = z; w = w}
 
