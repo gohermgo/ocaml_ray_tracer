@@ -38,3 +38,5 @@ val norm: t -> t
 val dot: t -> t -> float
 
 val cross: t -> t -> t
+
+val reflect: t -> t -> t

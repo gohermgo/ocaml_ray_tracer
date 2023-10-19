@@ -11,6 +11,8 @@
   transformation
   geometry
   sphere
-  ray)
+  ray
+  light
+  material)
  (inline_tests)
  (preprocess (pps ppx_inline_test)))

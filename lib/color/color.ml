@@ -5,10 +5,15 @@ let g color = Tuple.y color
 let b color = Tuple.z color
 let a color = Tuple.w color
 
-let equal c1 c2 = let aux n1 n2 = (Float.sub n1 n2) < Float.epsilon in
+let abs_diff x y = Float.abs (Float.sub x y)
+let f_equal x y = (abs_diff x y) < 0.0001
+
+let equal c1 c2 = f_equal (r c1) (r c2) && f_equal (g c1) (g c2) && f_equal (b c1) (b c2)
+  (*Tuple.equal c1 c2*)
+  (*let aux n1 n2 = (Float.sub n1 n2) < Float.epsilon in
   aux (r c1) (r c2) &&
   aux (g c1) (g c2) &&
-  aux (b c1) (b c2)
+  aux (b c1) (b c2)*)
 
 let init (r, g, b) = Tuple.init (r, g, b, 1.0)
 

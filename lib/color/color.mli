@@ -5,6 +5,8 @@ val g: t -> float
 val b: t -> float
 val a: t -> float
 
+val equal: t -> t -> bool
+
 val init: float * float * float -> t
 
 val add: t -> t -> t

@@ -1,6 +1,6 @@
 let () = print_endline "Hello, World!";;
 
-let p_pos_i = Tuple.point (0.0, 1.0, 0.0)
+(*let p_pos_i = Tuple.point (0.0, 1.0, 0.0)
 let p_vel_i = Tuple.mul (Tuple.norm (Tuple.vector (1.0, 1.8, 0.0))) 11.25
 let p = Projectile.init ~position:p_pos_i ~velocity:p_vel_i
 
@@ -8,23 +8,23 @@ let e_g = Tuple.vector (0.0, -0.1, 0.0)
 let e_w = Tuple.vector (-0.01, 0.0, 0.0)
 let e = Environment.init ~gravity:e_g ~wind:e_w
 
-let c = Canvas.init ~width:900 ~height:550
+let c = Canvas.init ~width:900 ~height:550*)
 
-let rec aux canvas = function
+(*let rec aux canvas = function
   | projectile when (Projectile.p_y projectile) > 0.0 -> let x = Float.to_int (Projectile.p_x projectile) in
     let y = Int.sub (Canvas.height canvas) (Float.to_int (Projectile.p_y projectile)) in
     let () = Canvas.write_pixel canvas ~x_idx:x ~y_idx:y ~color:(Color.init (1.0, 1.0, 1.0)) in aux canvas (Ray_lib.tick ~environment:e ~projectile:projectile)
-  | _ -> canvas;;
+  | _ -> canvas;;*)
 let save_canvas name c = 
   let filename = name ^ ".ppm" in
   let channel = open_out filename in
   Printf.fprintf channel "%s" (Ppm.canvas_to_ppm ~canvas:c);
   close_out channel;;
 
-let c = aux c p in save_canvas "projectile" c
-let clock = Canvas.init ~width:200 ~height:200
+(*let c = aux c p in save_canvas "projectile" c*)
+(*let clock = Canvas.init ~width:200 ~height:200*)
 
-let analog_clock canv =
+let _analog_clock canv =
   let (x_mid, y_mid) = (Int.to_float (Canvas.width canv / 2), Int.to_float (Canvas.height canv / 2)) in
   let (_x_0, _y_0) = (x_mid, Float.add y_mid (Float.div y_mid 4.0)) in
   let origin = Tuple.point (0.0, 0.0, 0.0) in
@@ -48,7 +48,7 @@ let analog_clock canv =
     v := (Matrix.mul_tuple rot_unit !v)
   done in
   save_canvas "clock" canv;;
-analog_clock clock
+(*_analog_clock clock*)
 (*
 let rec aux env = function
   | x when Projectile.y x > 0.0 -> print_float (Projectile.y x); print_newline (); aux env (Ray_lib.tick ~environment:env ~projectile:x)
@@ -68,14 +68,28 @@ let _rays_from_view height_bound width_bound = let r_0 = Ray.init ~origin:Tuple.
     done
   done in
   r_arr;;
-let () = let (w, h) = (100, 100) in
+let () = 
+  (* Initial setup, canvas etc *)
+  let pixel_count = 800 in 
+  let (w, h) = (pixel_count, pixel_count) in
   let canv = Canvas.init ~width:w ~height:h in
-  let col = Color.init(1.0, 0.0, 0.0) in
+  (* Create shape *)
   let shape = Geometry.init_unit_sphere () in
+  (* Add material *)
+  let m = Material.init_def () in
+  let () = Material.set_color m (Color.init (1.0, 0.5, 0.5)) in
+  let () = Geometry.set_material shape m in
+  (* Create point light *)
+  let light_position = Tuple.point (-10.0, 10.0, -10.0) in
+  let light_color = Color.init (1.0, 1.0, 1.0) in
+  let light = Light.init_point light_position light_color in
+  
+  (*let t = Transformation.skew ~x_y:0.7 ~x_z:0.0 ~y_x:0.0 ~y_z:0.0 ~z_x:0.0 ~z_y:0.0 in
+  let () = Geometry.set_transform shape t in*)
   let ray_origin = Tuple.point(0.0, 0.0, -5.0) in
   let wall_z = 10.0 in
-  let wall_size = 7.0 in
-  let canvas_size = Int.to_float h in
+  let wall_size = 8.0 in
+  let canvas_size = Int.to_float pixel_count in
   let pixel_size = Float.div wall_size canvas_size in
   let half = Float.div wall_size 2.0 in
   let () = for y = 0 to h - 1 do
@@ -83,13 +97,19 @@ let () = let (w, h) = (100, 100) in
     for x = 0 to w - 1 do
       let world_x = Float.add (Float.neg half) (Float.mul pixel_size (Int.to_float x)) in
       let position = Tuple.point(world_x, world_y, wall_z) in
-      let ray_direction = Tuple.sub position ray_origin in
+      let ray_direction = Tuple.norm (Tuple.sub position ray_origin) in
       let r = Ray.init ~origin:ray_origin ~direction:ray_direction in
       let xs = Ray.check_intersection shape r in
       match Ray.hit xs with
-        | Some(_) -> let () = print_int x in 
-          let () = print_endline " hit" in Canvas.write_pixel canv ~x_idx:x ~y_idx:y ~color:col 
-        | None -> print_endline "Miss"
+        | Some(ray_hit) -> let ray_t_val = Ray.Intersection.t_value ray_hit in 
+          let point = Ray.position r ray_t_val in
+          let normal = Geometry.normal_at shape point in
+          let eye = Tuple.neg ray_direction in
+          let color = Light.lighting m light point eye normal in
+          (*let () = print_int x in 
+          let () = print_endline " hit" in *)
+          Canvas.write_pixel canv ~x_idx:x ~y_idx:y ~color:color 
+        | None -> () (*print_endline "Miss"*)
     done
   done in 
   let () = save_canvas "sphere" canv in

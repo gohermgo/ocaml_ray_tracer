@@ -1,5 +1,5 @@
 (library
  (name sphere)
- (libraries transformation matrix tuple color)
+ (libraries transformation matrix tuple color material)
  (inline_tests)
  (preprocess (pps ppx_inline_test)))
