@@ -55,3 +55,55 @@ let rec aux env = function
   | _ -> print_endline "Hit the ground!";;
 *)
 (*aux e p*)
+let _point_to_pixel (p:Tuple.t) = (Tuple.x p, Tuple.y p)
+let _rays_from_view height_bound width_bound = let r_0 = Ray.init ~origin:Tuple.point_origin ~direction:(Tuple.vector(0.0, 0.0, 1.0)) in
+  let r_arr = Array.make_matrix width_bound height_bound r_0 in
+  let () = for w = 0 to width_bound - 1 do
+    for h = 0 to height_bound - 1 do
+      let (x_f, y_f) = (Int.to_float w, Int.to_float h) in
+      let r_o = Tuple.point(x_f, y_f, 0.0) in
+      let r_d = Tuple.vector(0.0, 0.0, 1.0) in
+      let r = Ray.init ~origin:r_o ~direction:r_d in
+      r_arr.(w).(h) <- r
+    done
+  done in
+  r_arr;;
+let () = let (w, h) = (100, 100) in
+  let canv = Canvas.init ~width:w ~height:h in
+  let col = Color.init(1.0, 0.0, 0.0) in
+  let shape = Geometry.init_unit_sphere () in
+  let ray_origin = Tuple.point(0.0, 0.0, -5.0) in
+  let wall_z = 10.0 in
+  let wall_size = 7.0 in
+  let canvas_size = Int.to_float h in
+  let pixel_size = Float.div wall_size canvas_size in
+  let half = Float.div wall_size 2.0 in
+  let () = for y = 0 to h - 1 do
+    let world_y = Float.sub half (Float.mul pixel_size (Int.to_float y)) in
+    for x = 0 to w - 1 do
+      let world_x = Float.add (Float.neg half) (Float.mul pixel_size (Int.to_float x)) in
+      let position = Tuple.point(world_x, world_y, wall_z) in
+      let ray_direction = Tuple.sub position ray_origin in
+      let r = Ray.init ~origin:ray_origin ~direction:ray_direction in
+      let xs = Ray.check_intersection shape r in
+      match Ray.hit xs with
+        | Some(_) -> let () = print_int x in 
+          let () = print_endline " hit" in Canvas.write_pixel canv ~x_idx:x ~y_idx:y ~color:col 
+        | None -> print_endline "Miss"
+    done
+  done in 
+  let () = save_canvas "sphere" canv in
+  print_endline "Finished"
+  (*let rays = rays_from_view h w in
+  let sph = Geometry.init_unit_sphere () in
+  let sph_t = Transformation.translation 0.0 0.0 2.5 in
+  let () = Geometry.set_transform sph sph_t in
+  let aux = Array.map (Ray.check_intersection sph) in
+  let isects = Array.map aux rays in
+  let aux = Array.map Ray.hit in
+  let hits = Array.map aux isects in
+  hits*)
+  
+
+(*let ray_to_pixel (r:Ray.t) = (Ray.)
+let hit_to_pixel *)

@@ -1,2 +1,5 @@
-(test
- (name ocaml_ray_tracer))
+(library
+ (name ocaml_ray_tracer_test)
+ (inline_tests)
+ (preprocess
+  (pps ppx_inline_test)))
