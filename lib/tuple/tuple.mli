@@ -1,4 +1,5 @@
-type t = { x: float; y: float; z: float; w: float }
+type t = float array
+(*type t = { x: float; y: float; z: float; w: float }*)
 
 val x: t -> float
 val y: t -> float
