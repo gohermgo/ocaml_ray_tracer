@@ -10,11 +10,15 @@ let to_string t = "X: " ^ Float.to_string (x t) ^
   ", Y: " ^ Float.to_string (y t) ^ 
   ", Z: " ^ Float.to_string (z t) ^
   ", W: " ^ Float.to_string (w t)
-let abs_diff x y = Float.abs (Float.sub x y)
-let f_equal x y = (abs_diff x y) < 0.0001
-let equal t1 t2 = f_equal (x t1) (x t2) && f_equal (y t1) (y t2) && f_equal (z t1) (z t2) && f_equal (w t1) (w t2)
+
+let abs_diff e1 e2 = Float.abs (e1 -. e2)
+let f_equal e1 e2 = (abs_diff e1 e2) < 0.0001
+let equal t1 t2 = Array.for_all2 f_equal t1 t2
+  (*Array.map2 (fun e1 e2 -> f_equal e1 e2) t1 t2 in Array.
+  f_equal (x t1) (x t2) && f_equal (y t1) (y t2) && f_equal (z t1) (z t2) && f_equal (w t1) (w t2)*)
 
 let init (x, y, z, w) = [|x; y; z; w|] (*{ x = x; y = y; z = z; w = w}*)
+let of_array (a: float array) = a
 
 let point (x, y, z) = init (x, y, z, 1.0)
 let point_origin = point (0.0, 0.0, 0.0)
@@ -26,16 +30,20 @@ let vector (x, y, z) = init (x, y, z, 0.0)
 
 let is_vector v = Float.equal (w v) 0.0
 
-let add t1 t2 = let t = Array.map2 Float.add t1 t2 in
-  init (x t, y t, z t, w t)
+let sum_of t = Array.fold_left (+.) 0.0 t
+
+let squared_sum_of t = Array.fold_left (fun acc e -> acc +. (e ** 2.0)) 0.0 t
+
+let add t1 t2 = let t = Array.map2 Float.add t1 t2 in of_array t
+  (*init (x t, y t, z t, w t)*)
 
 (*let%test "Scenario: Adding two tuples" = let a1 = init (3.0, -2.0, 5.0, 1.0) in
   let a2 = init (-2.0, 3.0, 1.0, 0.0) in
   equal (add a1 a2) (init (1.0, 1.0, 6.0, 1.0))*)
 
 (* sub t1 t2 is the per element difference of t1 and t2 *)
-let sub t1 t2 = let t = Array.map2 Float.sub t1 t2 in
-  init (x t, y t, z t, w t)
+let sub t1 t2 = let t = Array.map2 Float.sub t1 t2 in of_array t
+  (*init (x t, y t, z t, w t)*)
 
 (* Demonstrates how the difference of points gives w=0.0, thus a vector *)
 (*let%test "Scenario: Subtracting two points" = let p1 = point (3.0, 2.0, 1.0) in
@@ -68,8 +76,13 @@ let div t scalar = let f = (fun x -> Float.div x scalar) in Array.map f t
 (*let%test "Scenario: Dividing a tuple by a scalar" = let a = init (1.0, -2.0, 3.0, -4.0) in
   equal (div a 2.0) (init (0.5, -1.0, 1.5, -2.0))*)
 
-let mag t = let f = (fun x -> Float.pow x 2.0) in let x =
-  Array.fold_left (fun acc e -> Float.add acc (f e)) 0.0 t in Float.sqrt x
+let mag t = 
+  (*let squared_sum_of = Array.fold_left (fun acc e -> acc +. (Float.pow e 2.0)) 0.0 in*)
+  Float.sqrt (squared_sum_of t)
+  (*let squared = (fun x -> Float.pow x 2.0) in 
+  let g = Array.fold_left (fun acc e -> Float.add acc (squared e)) 0.0 in
+  Float.sqrt (g t)*)
+  (*let x = Array.fold_left (fun acc e -> Float.add acc (squared e)) 0.0 t in Float.sqrt x*)
   (*let aux value = Float.pow value 2.0 in
   Float.sqrt ((aux t.x) +. (aux t.y) +. (aux t.z) +. (aux t.w))*)
 (*let%test "Scenario: Computing the magnitude of vector(1.0, 0.0, 0.0)" = let v = vector (1.0, 0.0, 0.0) in
@@ -92,20 +105,20 @@ let%test "Scenario: Normalizing a vector(1.0, 2.0, 3.0)" = let v = vector (1.0, 
 let%test "Scenario: The magnitude of a normalized vector" = let v = vector (1.0, 2.0, 3.0) in
   Float.equal (mag (norm v)) 1.0*)
 
-let dot t1 t2 : float = let t = Array.map2 Float.mul t1 t2 in Array.fold_left Float.add 0.0 t
+let dot t1 t2 : float = let t = Array.map2 Float.mul t1 t2 in sum_of t
   (*(Float.mul t1.x t2.x +. Float.mul t1.y t2.y +. Float.mul t1.z t2.z +. Float.mul t1.w t2.w)*)
 (*let%test "Scenario: The dot product of two tuples" = let a = vector (1.0, 2.0, 3.0) in
   let b = vector (2.0, 3.0, 4.0) in
   Float.equal (dot a b) 20.0*)
 
-let cross t1 t2 = let aux a b c d = Float.sub (Float.mul a b) (Float.mul c d) in
-  let x_c = aux (y t1) (z t2) (z t1) (y t2) in
-  let y_c = aux (z t1) (x t2) (x t1) (z t2) in 
-  let z_c = aux (x t1) (y t2) (y t1) (x t2) in vector (x_c, y_c, z_c)
+let cross t1 t2 = (*let aux a b c d = Float.sub (Float.mul a b) (Float.mul c d) in*)
+  let x = (t1.(1) *. t2.(2)) -. (t1.(2) *. t2.(1))
+  and y = (t1.(2) *. t2.(0)) -. (t1.(0) *. t2.(2))
+  and z = (t1.(0) *. t2.(1)) -. (t1.(1) *. t2.(0)) in vector (x, y, z)
 (*let%test "Scenario: The cross product of two vectors" = let a = vector (1.0, 2.0, 3.0) in
   let b = vector (2.0, 3.0, 4.0) in
   equal (cross a b) (vector (-1.0, 2.0, -1.0)) && equal (cross b a) (vector (1.0, -2.0, 1.0))*)
-let reflect v_in v_norm = sub v_in (mul v_norm (Float.mul 2.0 (dot v_in v_norm)))
+let reflect v_in v_norm = sub v_in (mul v_norm (2.0 *. (dot v_in v_norm)))
   (*let v_out = sub v_in v_norm in
   let temp = Float.mul 2.0 (dot v_in v_norm) in
   mul v_out temp*)

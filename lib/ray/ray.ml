@@ -29,6 +29,17 @@ module Intersection = struct
     Float.compare t1 t2
 end
 
+module Comps = struct
+  type 'a t = { t_value: float; o: 'a Geometry.shape ref; point: Tuple.t; eyev: Tuple.t; normalv: Tuple.t; inside: bool }
+  let init t o p eyev normalv i = {t_value = t; o = o; point = p; eyev = eyev; normalv = normalv; inside = i}
+  let t_value c = c.t_value
+  let object_pointer c = c.o
+  let point c = c.point
+  let eyev c = c.eyev
+  let normalv c = c.normalv
+  let inside c = c.inside
+end
+
 let transform (r_i: t) (m: Matrix.t) : t = let o_new = Matrix.mul_tuple m (origin r_i) in
   let d_new = Matrix.mul_tuple m (direction r_i) in
   init ~origin:o_new ~direction:d_new
@@ -58,3 +69,13 @@ let check_intersection (shape: 'a Geometry.shape) (ry) : 'a Intersection.t array
 let hit (iarr: 'a Intersection.t array) = let () = Array.sort Intersection.compare iarr in
   Array.find_opt (fun e -> Intersection.t_value e > 0.0) iarr
 
+let precompute i ray =
+  let t = Intersection.t_value i
+  and o = Intersection.object_pointer i in
+  let p = position ray t
+  and eyev = Tuple.neg (direction ray) in
+  let normalv = Geometry.normal_at !o p in
+  let (inside, normalv) = if Tuple.dot normalv eyev < 0.0 
+    then (true, Tuple.neg normalv) 
+    else (false, normalv) in
+  Comps.init t o p eyev normalv inside

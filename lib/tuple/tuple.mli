@@ -11,6 +11,7 @@ val to_string: t -> string
 val equal: t -> t -> bool
 
 val init: (float * float * float * float) -> t
+val of_array: float array -> t
 
 val point: (float * float * float) -> t
 val point_origin: t
@@ -20,6 +21,10 @@ val is_point: t -> bool
 val vector: (float * float * float) -> t
 
 val is_vector: t -> bool
+
+val sum_of: t -> float
+
+val squared_sum_of: t -> float
 
 val add: t -> t -> t
 

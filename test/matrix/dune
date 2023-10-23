@@ -1,0 +1,6 @@
+(library
+ (name test_matrix)
+ (libraries matrix)
+ (inline_tests)
+ (preprocess
+  (pps ppx_inline_test ppx_assert)))

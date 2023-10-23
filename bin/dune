@@ -1,5 +1,4 @@
 (executable
  (public_name ocaml_ray_tracer)
  (name main)
- (libraries ray_lib)
- (flags -extension local))
+ (libraries ray_lib))
