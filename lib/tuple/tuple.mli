@@ -15,10 +15,16 @@ val of_array: float array -> t
 
 val point: (float * float * float) -> t
 val point_origin: t
+val xp: unit -> t
+val yp: unit -> t
+val zp: unit -> t
 
 val is_point: t -> bool
 
 val vector: (float * float * float) -> t
+val xv: unit -> t
+val yv: unit -> t
+val zv: unit -> t
 
 val is_vector: t -> bool
 

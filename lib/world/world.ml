@@ -26,6 +26,7 @@ let init_def () =
   
 let objects world = world.objects
 let lights world = world.lights
+let set_light world index light = world.lights.(index) <- light
 
 let check_intersections world ray =
   (*let os = objects world in*)
@@ -33,3 +34,57 @@ let check_intersections world ray =
   Array.sort Ray.Intersection.compare a;
   a
     
+let shade_hit world comps =
+  let hit_point = Ray.Comps.point comps
+  and hit_eyev = Ray.Comps.eyev comps
+  and hit_normalv = Ray.Comps.normalv comps
+  and hit_object = Ray.Comps.object_pointer comps in
+  let hit_material = Geometry.get_material !hit_object in
+  Array.fold_left (fun color_acc light -> Color.add color_acc (Light.lighting !hit_material light hit_point hit_eyev hit_normalv)) (Color.init (0.0, 0.0, 0.0)) (lights world)
+let color_at world ray =
+  (*let is = check_intersections world ray in*)
+  (*print_string "Intersection count ";
+  print_int (Array.length is);
+  print_newline ();
+  Array.iter (fun i -> let comp = Ray.precompute i ray in
+    let c = shade_hit world comp in
+    print_endline "Color in map";
+    print_float (Color.r c);
+    print_newline ();
+    print_float (Color.g c);
+    print_newline ();
+    print_float (Color.b c);
+    print_newline ();
+    print_newline ();
+  ) is;*)
+  match Ray.hit (check_intersections world ray) with
+    | Some(hit) -> shade_hit world (Ray.precompute hit ray)
+    | None -> Color.init (0.0, 0.0, 0.0)
+  (* Seems the algorithm just takes the first hit???? *)
+  (*if Array.length is > 0 then let c = shade_hit world (Ray.precompute is.(0) ray) in
+    print_endline "Color on computation";
+    print_float (Color.r c);
+    print_newline ();
+    print_float (Color.g c);
+    print_newline ();
+    print_float (Color.b c);
+    print_newline ();
+    print_newline ();
+    c
+  else Color.init (0.0, 0.0, 0.0)*)
+  (*let shaded_hits = Array.map (fun i -> let c = shade_hit world (Ray.precompute i ray) in
+    print_endline "Color in map";
+  print_float (Color.r c);
+  print_newline ();
+  print_float (Color.g c);
+  print_newline ();
+  print_float (Color.b c);
+  print_newline ();
+    c
+    ) is in
+  Array.fold_left (fun acc col -> Color.add acc col) (Color.init (0.0, 0.0, 0.0)) shaded_hits *)
+  (*let cs = Array.map (fun i -> Ray.precompute i ray) is in
+  let fold_fun = fun color_acc c -> Color.add color_acc (shade_hit world c) in
+  Array.fold_left fold_fun (Color.init (0.0, 0.0, 0.0)) cs*)
+(*Array.map (fun o -> Ray.check_intersection 
+  let comps = Ray.precompute*)

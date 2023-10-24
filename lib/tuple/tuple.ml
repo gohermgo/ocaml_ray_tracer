@@ -21,12 +21,18 @@ let init (x, y, z, w) = [|x; y; z; w|] (*{ x = x; y = y; z = z; w = w}*)
 let of_array (a: float array) = a
 
 let point (x, y, z) = init (x, y, z, 1.0)
+let xp () = point (1.0, 0.0, 0.0)
+let yp () = point (0.0, 1.0, 0.0)
+let zp () = point (0.0, 0.0, 1.0)
 let point_origin = point (0.0, 0.0, 0.0)
 
 let is_point p = Float.equal (w p) 1.0
 
 
 let vector (x, y, z) = init (x, y, z, 0.0)
+let xv () = vector (1.0, 0.0, 0.0)
+let yv () = vector (0.0, 1.0, 0.0)
+let zv () = vector (0.0, 0.0, 1.0)
 
 let is_vector v = Float.equal (w v) 0.0
 
