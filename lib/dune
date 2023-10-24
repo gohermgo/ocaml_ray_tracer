@@ -13,6 +13,8 @@
   sphere
   ray
   light
-  material)
+  material
+  camera
+  world)
  (inline_tests)
  (preprocess (pps ppx_inline_test)))
