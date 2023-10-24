@@ -2,8 +2,12 @@ type t = float array array
 val f_equal: float -> float -> bool
 val init: int -> int -> t
 val dim_of: t -> (int * int)
+
+val row_equal: float array -> float array -> bool
 val equal: t -> t -> bool
+
 val ident: int -> t
+
 val print: t -> unit
 val get_col: t -> int -> float array
 val mul: t -> t -> t

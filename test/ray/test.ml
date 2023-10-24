@@ -137,3 +137,34 @@ let%test "Scenario: The hit is always the lowest nonnegative intersection" = let
   let xs = [|i1; i2; i3; i4|] in
   let i = Option.get (hit xs) in
   Intersection.equal i i4
+
+(* Precomp tests *)
+
+let%test "Precomputing the state of an intersection" =
+  let r = Ray.init ~origin:(Tuple.point(0.0, 0.0, -5.0)) ~direction:(Tuple.vector (0.0, 0.0, 1.0))
+  and s = Geometry.init_unit_sphere () in
+  let i = Ray.Intersection.init ~t:4.0 ~o:(ref s) in
+  let cs = Ray.precompute i r in
+  f_equal (Ray.Comps.t_value cs) (Intersection.t_value i) &&
+  Ray.Comps.object_pointer cs == Ray.Intersection.object_pointer i &&
+  Ray.Comps.object_pointer cs = Ray.Intersection.object_pointer i &&
+  Tuple.equal (Ray.Comps.point cs) (Tuple.point (0.0, 0.0, -1.0)) &&
+  Tuple.equal (Ray.Comps.eyev cs) (Tuple.vector (0.0, 0.0, -1.0)) &&
+  Tuple.equal (Ray.Comps.normalv cs) (Tuple.vector (0.0, 0.0, -1.0))
+
+let%test "The hit, when an intersection occurs on the outside" =
+  let r = Ray.init ~origin:(Tuple.point(0.0, 0.0, -5.0)) ~direction:(Tuple.vector (0.0, 0.0, 1.0))
+  and s = Geometry.init_unit_sphere () in
+  let i = Ray.Intersection.init ~t:4.0 ~o:(ref s) in
+  let cs = Ray.precompute i r in
+  not (Comps.inside cs)
+
+let%test "The hit, when an intersection occurs on the inside" =
+  let r = Ray.init ~origin:(Tuple.point(0.0, 0.0, 0.0)) ~direction:(Tuple.vector (0.0, 0.0, 1.0))
+  and s = Geometry.init_unit_sphere () in
+  let i = Ray.Intersection.init ~t:1.0 ~o:(ref s) in
+  let cs = Ray.precompute i r in
+  Tuple.equal (Ray.Comps.point cs) (Tuple.point (0.0, 0.0, 1.0)) &&
+  Tuple.equal (Ray.Comps.eyev cs) (Tuple.vector (0.0, 0.0, -1.0)) &&
+  Ray.Comps.inside cs &&
+  Tuple.equal (Ray.Comps.normalv cs) (Tuple.vector (0.0, 0.0, -1.0))

@@ -1,0 +1,5 @@
+(library
+ (name world)
+ (libraries sphere transformation matrix tuple color material geometry light ray)
+ (inline_tests)
+ (preprocess (pps ppx_inline_test)))

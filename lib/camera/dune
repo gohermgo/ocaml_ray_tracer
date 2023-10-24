@@ -1,0 +1,9 @@
+(library
+ (name camera)
+ (libraries 
+  canvas
+  transformation
+  ray
+  world)
+ (inline_tests)
+ (preprocess (pps ppx_inline_test)))

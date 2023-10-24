@@ -68,7 +68,7 @@ let _rays_from_view height_bound width_bound = let r_0 = Ray.init ~origin:Tuple.
     done
   done in
   r_arr;;
-let () = 
+let _first_scene () = 
   (* Initial setup, canvas etc *)
   let pixel_count = 800 in 
   let (w, h) = (pixel_count, pixel_count) in
@@ -127,3 +127,84 @@ let () =
 
 (*let ray_to_pixel (r:Ray.t) = (Ray.)
 let hit_to_pixel *)
+let floor_material =
+  let m = Material.init_def () in
+  Material.set_color m (Color.init (1.0, 0.9, 0.9));
+  Material.set_specular m 0.0;
+  m
+
+let floor =
+  let s = Geometry.init_unit_sphere () in
+  Geometry.set_transform s (Transformation.scaling 10.0 0.01 10.0);
+  Geometry.set_material s floor_material;
+  s
+
+let left_wall =
+  let s = Geometry.init_unit_sphere () in
+  let transform = Matrix.mul (Transformation.translation 0.0 0.0 0.5) (Transformation.rotation (Float.pi /. 2.0) (Float.neg (Float.pi /. 4.0)) 0.0) in
+  let transform = Matrix.mul transform (Transformation.scaling 10.0 0.01 10.0) in
+  Geometry.set_transform s transform;
+  Geometry.set_material s floor_material;
+  s
+let right_wall =
+  let s = Geometry.init_unit_sphere () in
+  let transform = Matrix.mul (Transformation.translation 0.0 0.0 0.5) (Transformation.rotation (Float.pi /. 2.0) (Float.pi /. 4.0) 0.0) in
+  let transform = Matrix.mul transform (Transformation.scaling 10.0 0.01 10.0) in
+  Geometry.set_transform s transform;
+  Geometry.set_material s floor_material;
+  s
+
+
+let sphere_material () =
+  let m = Material.init_def () in
+  Material.set_diffuse m 0.7;
+  Material.set_specular m 0.3;
+  m
+
+let middle_sphere_color = Color.init (0.1, 1.0, 0.5)
+
+let middle_sphere_transform = Transformation.translation (-0.5) 1.0 0.5
+
+let middle_sphere =
+  let s = Geometry.init_unit_sphere () in
+  Geometry.set_transform s middle_sphere_transform;
+  let m = sphere_material () in
+  Material.set_color m middle_sphere_color;
+  Geometry.set_material s m;
+  s
+
+let right_sphere_color = Color.init (0.5, 1.0, 0.1)
+
+let right_sphere_transform = Matrix.mul (Transformation.translation 1.5 0.5 (-0.5)) (Transformation.scaling 0.5 0.5 0.5)
+
+let right_sphere =
+  let s = Geometry.init_unit_sphere () in
+  Geometry.set_transform s right_sphere_transform;
+  let m = sphere_material () in
+  Material.set_color m right_sphere_color;
+  Geometry.set_material s m;
+  s
+
+let left_sphere_color = Color.init (1.0, 0.8, 0.1)
+
+let left_sphere_transform = Matrix.mul (Transformation.translation (-1.5) 0.33 (-0.75)) (Transformation.scaling 0.33 0.33 0.33)
+
+let left_sphere =
+  let s = Geometry.init_unit_sphere () in
+  Geometry.set_transform s left_sphere_transform;
+  let m = sphere_material () in
+  Material.set_color m left_sphere_color;
+  Geometry.set_material s m;
+  s
+
+let () = 
+  let world_light = Light.init_point (Tuple.point (-10.0, 10.0, -10.0)) (Color.init (1.0, 1.0, 1.0))
+  and world_geometry = [|floor; left_wall; right_wall; left_sphere; middle_sphere; right_sphere|] in
+  let world = World.init world_geometry [|world_light|] in
+  let camera = Camera.init 800 450 (Float.pi /. 3.0) in
+  Camera.set_transform camera (Transformation.view_transform (Tuple.point (0.0, 1.5, -5.0)) (Tuple.point (0.0, 1.0, 0.0)) (Tuple.vector (0.0, 1.0, 0.0)));
+  let canvas = Camera.render camera world in
+  save_canvas "new_render" canvas
+
+
+  

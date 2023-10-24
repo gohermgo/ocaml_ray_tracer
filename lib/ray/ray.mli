@@ -12,6 +12,16 @@ module Intersection : sig
   val equal: 'a t -> 'a t -> bool
   val compare: 'a t -> 'a t -> int
 end
+module Comps: sig
+  type 'a t = { t_value: float; o: 'a Geometry.shape ref; point: Tuple.t; eyev: Tuple.t; normalv: Tuple.t; inside: bool }
+  val t_value: 'a t -> float
+  val object_pointer: 'a t -> 'a Geometry.shape ref
+  val point: 'a t -> Tuple.t
+  val eyev: 'a t -> Tuple.t
+  val normalv: 'a t -> Tuple.t
+  val inside: 'a t -> bool
+end
+
 val transform: t -> Matrix.t -> t
 val check_intersection: 'a Geometry.shape -> t -> 'a Intersection.t array
 (*type 'a intersection = {t_val: float; int_obj: 'a Geometry.shape ref}
@@ -23,3 +33,4 @@ val int_shape: 'a intersection -> 'a Geometry.shape ref*)
 (*val init_intersection_arr: 'a Geometry.shape -> t -> 'a intersection array
 val intersections: 'a intersection array -> 'a intersection array*)
 val hit: 'a Intersection.t array -> 'a Intersection.t option
+val precompute: 'a Intersection.t -> t -> 'a Comps.t

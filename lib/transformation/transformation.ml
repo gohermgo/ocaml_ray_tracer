@@ -116,6 +116,23 @@ let skew ~x_y ~x_z ~y_x ~y_z ~z_x ~z_y = let tr = Matrix.ident 4 in
   let () = tr.(2).(1) <- z_y in
   tr
 
+let def_from () = Tuple.point_origin
+
+let def_to () = Tuple.neg (Tuple.zp ())
+
+let def_up () = Tuple.zv ()
+
+let view_transform from_p to_p up_v =
+  let forward = Tuple.norm (Tuple.sub to_p from_p) in
+  let left = Tuple.cross forward (Tuple.norm up_v) in
+  let true_up = Tuple.cross left forward in
+  let orientation = Matrix.ident 4 in
+  orientation.(0) <- [|Tuple.x left; Tuple.y left; Tuple.z left; 0.0|];
+  orientation.(1) <- [|Tuple.x true_up; Tuple.y true_up; Tuple.z true_up; 0.0|];
+  orientation.(2) <- [|~-.(Tuple.x forward); ~-.(Tuple.y forward); ~-.(Tuple.z forward); 0.0|];
+  Matrix.mul orientation (translation ~-.(Tuple.x from_p) ~-.(Tuple.y from_p) ~-.(Tuple.z from_p))
+  
+
 let%test "Scenario: A skew moves x in proportion to y" = let tr = skew ~x_y:1.0 ~x_z:0.0 ~y_x:0.0 ~y_z:0.0 ~z_x:0.0 ~z_y:0.0 in 
   let p = Tuple.point (2.0, 3.0, 4.0) in
   Tuple.equal (Matrix.mul_tuple tr p) (Tuple.point (5.0, 3.0, 4.0))
@@ -160,3 +177,39 @@ let%test "Scenario: Chained transformations must be applied in reverse order" = 
   let c = translation 10.0 5.0 7.0 in
   let t = Matrix.mul c (Matrix.mul a b) in
   Tuple.equal (Matrix.mul_tuple t p) (Tuple.point (15.0, 0.0, 7.0))
+
+(* View transformation tests *)
+
+let%test "The transformation matrix for the default orientation" =
+  let from_p = Tuple.point (0.0, 0.0, 0.0)
+  and to_p = Tuple.point (0.0, 0.0, -1.0)
+  and up_v = Tuple.vector (0.0, 1.0, 0.0) in
+  let orientation = view_transform from_p to_p up_v in  
+  Matrix.equal orientation (Matrix.ident 4)
+
+let%test "A view transformation matrix looking in positive z direction" =
+  let from_p = Tuple.point (0.0, 0.0, 0.0)
+  and to_p = Tuple.point (0.0, 0.0, 1.0)
+  and up_v = Tuple.vector (0.0, 1.0, 0.0) in
+  let orientation = view_transform from_p to_p up_v in  
+  Matrix.equal orientation (scaling (-1.0) 1.0 (-1.0))
+
+let%test "The view transformation moves the world" =
+  let from_p = Tuple.point (0.0, 0.0, 8.0)
+  and to_p = Tuple.point (0.0, 0.0, 0.0)
+  and up_v = Tuple.vector (0.0, 1.0, 0.0) in
+  let orientation = view_transform from_p to_p up_v in  
+  Matrix.equal orientation (translation 0.0 0.0 (-8.0))
+
+let%test "An arbitrary view transform" =
+  let from_p = Tuple.point (1.0, 3.0, 2.0)
+  and to_p = Tuple.point (4.0, -2.0, 8.0)
+  and up_v = Tuple.vector (1.0, 1.0, 0.0) in
+  let orientation = view_transform from_p to_p up_v
+  and expected = Matrix.ident 4 in
+  expected.(0) <- [| -0.50709; 0.50709; 0.67612; -2.36643|];
+  expected.(1) <- [| 0.76772; 0.60609; 0.12122; -2.82843|];
+  expected.(2) <- [| -0.35857; 0.59761; -0.71714; 0.0|];
+  Matrix.equal orientation expected
+
+

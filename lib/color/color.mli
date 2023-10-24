@@ -8,6 +8,7 @@ val a: t -> float
 val equal: t -> t -> bool
 
 val init: float * float * float -> t
+val of_array: float array -> t
 
 val add: t -> t -> t
 
