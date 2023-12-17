@@ -216,7 +216,7 @@ let () =
 
   (* let canvas = Domainslib.Task.run render_pool (fun () -> Camera.render_pooled render_pool camera world) in *)
   (* let canvas = Camera.render_pooled render_pool camera world in *)
-  let canvas = Camera.render_parallel camera world in
+  let canvas = Camera.render_pooled camera world in
   Domainslib.Task.teardown_pool render_pool;
   (* Domainslib.Task.teardown_pool world_pool;
   Domainslib.Task.teardown_pool ray_pool; *)

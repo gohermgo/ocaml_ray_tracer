@@ -138,7 +138,10 @@ let render_parallel c w =
   let (hsize, vsize) = (hsize c, vsize c) in
   let image = Canvas.init ~width:hsize ~height:vsize in
   (*let main_pool = T.setup_pool ~num_domains:4 () in*)
-  let pool = Option.get (T.lookup_pool "render") in
+  let pool = match T.lookup_pool "render" with
+    | Some v -> v
+    | _ -> raise (invalid_arg "no pool found in render_parallel") in
+  (* let pool = Option.get (T.lookup_pool "render") in *)
   T.parallel_for pool ~start:0 ~finish:(vsize - 1) ~body:(fun y -> 
     (* T.run pool (fun () -> render_horizontal_pooled y (hsize - 1) c image w); *)
     render_horizontal_pooled y (hsize - 1) c image w;
