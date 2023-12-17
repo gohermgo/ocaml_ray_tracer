@@ -4,6 +4,7 @@
   canvas
   transformation
   ray
-  world)
+  world
+  domainslib)
  (inline_tests)
  (preprocess (pps ppx_inline_test)))

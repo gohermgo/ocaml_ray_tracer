@@ -24,6 +24,8 @@ end
 
 val transform: t -> Matrix.t -> t
 val check_intersection: 'a Geometry.shape -> t -> 'a Intersection.t array
+val check_intersection_pooled: 'a Geometry.shape -> t -> 'a Intersection.t array
+val check_intersection_parallel: Domainslib.Task.pool -> 'a Geometry.shape -> t -> 'a Intersection.t array
 (*type 'a intersection = {t_val: float; int_obj: 'a Geometry.shape ref}
 type 'a intersection_col = 'a intersection array
 val int_init: float -> 'a Geometry.shape ref -> 'a intersection

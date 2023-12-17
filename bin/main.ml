@@ -201,9 +201,26 @@ let () =
   let world_light = Light.init_point (Tuple.point (-10.0, 10.0, -10.0)) (Color.init (1.0, 1.0, 1.0))
   and world_geometry = [|floor; left_wall; right_wall; left_sphere; middle_sphere; right_sphere|] in
   let world = World.init world_geometry [|world_light|] in
+  (*
   let camera = Camera.init 800 450 (Float.pi /. 3.0) in
+  *)
+  let camera = Camera.init 400 225 (Float.pi /. 3.0) in
+  (*
+  let camera = Camera.init 80 45 (Float.pi /. 3.0) in
+  *)
   Camera.set_transform camera (Transformation.view_transform (Tuple.point (0.0, 1.5, -5.0)) (Tuple.point (0.0, 1.0, 0.0)) (Tuple.vector (0.0, 1.0, 0.0)));
-  let canvas = Camera.render camera world in
+  let render_pool = Domainslib.Task.setup_pool ~name:"render" ~num_domains:4 () 
+  (* and world_pool = Domainslib.Task.setup_pool ~name:"world" ~num_domains:4 ()
+  and ray_pool = Domainslib.Task.setup_pool ~name:"ray" ~num_domains:4 () *)
+  and matrix_pool = Domainslib.Task.setup_pool ~name:"matrix" ~num_domains:8 () in
+
+  (* let canvas = Domainslib.Task.run render_pool (fun () -> Camera.render_pooled render_pool camera world) in *)
+  (* let canvas = Camera.render_pooled render_pool camera world in *)
+  let canvas = Camera.render_parallel camera world in
+  Domainslib.Task.teardown_pool render_pool;
+  (* Domainslib.Task.teardown_pool world_pool;
+  Domainslib.Task.teardown_pool ray_pool; *)
+  Domainslib.Task.teardown_pool matrix_pool;
   save_canvas "new_render" canvas
 
 

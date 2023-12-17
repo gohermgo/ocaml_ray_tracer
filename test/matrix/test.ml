@@ -89,7 +89,6 @@ let%test "Scenario: Constructing and inspecting a column vector" =
 
 (* Manipulation tests *)
 
-
 let%test "Scenario: Multiplying two matrices" = 
   let m1 = Matrix.init 4 4 in
   let () = m1.(0) <- [|1.0; 2.0; 3.0; 4.0|]
@@ -107,6 +106,32 @@ let%test "Scenario: Multiplying two matrices" =
   and () = expected.(1) <- [|44.0; 54.0; 114.0; 108.0|]
   and () = expected.(2) <- [|40.0; 58.0; 110.0; 102.0|]
   and () = expected.(3) <- [|16.0; 26.0; 46.0; 42.0|] in
+  Matrix.equal m expected
+let%test "Scenario: Multiplying two matrices (parallel)" = 
+  let m1 = Matrix.init 4 4 in
+
+  let () = m1.(0) <- [|1.0; 2.0; 3.0; 4.0|]
+  and () = m1.(1) <- [|5.0; 6.0; 7.0; 8.0|]
+  and () = m1.(2) <- [|9.0; 8.0; 7.0; 6.0|]
+  and () = m1.(3) <- [|5.0; 4.0; 3.0; 2.0|]
+  and m2 = Matrix.init 4 4 in
+  let () = m2.(0) <- [|-2.0; 1.0; 2.0; 3.0|]
+  and () = m2.(1) <- [|3.0; 2.0; 1.0; -1.0|]
+  and () = m2.(2) <- [|4.0; 3.0; 6.0; 5.0|]
+  and () = m2.(3) <- [|1.0; 2.0; 7.0; 8.0|] in
+
+  let pool = Domainslib.Task.setup_pool ~num_domains:4 () in
+
+  let m = Domainslib.Task.run pool (fun () -> Matrix.mul_parallel pool m1 m2)
+  and expected = Matrix.init 4 4 in
+
+  Domainslib.Task.teardown_pool pool;
+
+  let () = expected.(0) <- [|20.0; 22.0; 50.0; 48.0|]
+  and () = expected.(1) <- [|44.0; 54.0; 114.0; 108.0|]
+  and () = expected.(2) <- [|40.0; 58.0; 110.0; 102.0|]
+  and () = expected.(3) <- [|16.0; 26.0; 46.0; 42.0|] in
+
   Matrix.equal m expected
 
 let%test "Scenario: Multiplying a matrix by the identity matrix" = 
@@ -162,8 +187,20 @@ let%test "Scenario: A submatrix of a 3x3 matrix is a 2x2 matrix" =
   nrows == 2 && ncols == 2 &&
   Matrix.row_equal m_sub.(0) [|-3.0; 2.0|] &&
   Matrix.row_equal m_sub.(1) [|0.0; 6.0|]
+let%test "Scenario: A submatrix of a 3x3 matrix is a 2x2 matrix (parallel)" = 
+  let m = Matrix.init 3 3 in
+  let () = m.(0) <- [|1.0; 5.0; 0.0|] 
+  and () = m.(1) <- [|-3.0; 2.0; 7.0|]
+  and () = m.(2) <- [|0.0; 6.0; -3.0|] in
+  let pool = Domainslib.Task.setup_pool ~num_domains:4 () in
+  let m_sub = Domainslib.Task.run pool (fun () -> Matrix.submat_parallel pool m ~omit_row:0 ~omit_col:2) in
+  Domainslib.Task.teardown_pool pool;
+  let (nrows, ncols) = Matrix.dim_of m_sub in (*(Array.length m_sub, Array.length m_sub.(0)) in*)
+  nrows == 2 && ncols == 2 &&
+  Matrix.row_equal m_sub.(0) [|-3.0; 2.0|] &&
+  Matrix.row_equal m_sub.(1) [|0.0; 6.0|]
 
-let%test "Scenario: A submatrix of a 3x3 matrix is a 2x2 matrix" = 
+let%test "Scenario: A submatrix of a 4x4 matrix is a 3x3 matrix" = 
   let m = Matrix.init 4 4 in
   let () = m.(0) <- [|-6.0; 1.0; 1.0; 6.0|]  
   and () = m.(1) <- [|-8.0; 5.0; 8.0; 6.0|] 
@@ -191,7 +228,7 @@ let%test "Calculating the determinant of a 4x4 matrix" =
   f_equal (Matrix.cofactor m 0 3) 51.0 &&
   f_equal (Matrix.det m) (-4071.0)
 
-(* Intersion tests *)
+(* Inversion tests *)
 
 let%test "Scenario: Testing an invertible matrix for invertibility" = 
   let m = Matrix.init 4 4 in
@@ -201,6 +238,17 @@ let%test "Scenario: Testing an invertible matrix for invertibility" =
   and () = m.(3) <- [|9.0; 1.0; 7.0; -6.0|] in
   f_equal (Matrix.det m) (-2120.0) && 
   Matrix.is_invertible m 
+let%test "Scenario: Testing an invertible matrix for invertibility (parallel)" = 
+  let m = Matrix.init 4 4 in
+  let () = m.(0) <- [|6.0; 4.0; 4.0; 4.0|] 
+  and () = m.(1) <- [|5.0; 5.0; 7.0; 6.0|] 
+  and () = m.(2) <- [|4.0; -9.0; 3.0; -7.0|] 
+  and () = m.(3) <- [|9.0; 1.0; 7.0; -6.0|] in
+  let pool = Domainslib.Task.setup_pool ~num_domains:4 () in
+  let d = Domainslib.Task.run pool (fun () -> Matrix.det_parallel pool m)
+  and i = Domainslib.Task.run pool (fun () -> Matrix.is_invertible_parallel pool m) in
+  f_equal d (-2120.0) &&
+  i
 
 let%test "Scenario: Testing a noninvertible matrix for invertibility" = 
   let m = Matrix.init 4 4 in
@@ -224,6 +272,34 @@ let%test "Scenario: Calculating the inverse of a matrix" =
   f_equal (Matrix.cofactor m 3 2) 105.0 &&
 
   let m_i = Matrix.invert m in
+
+  f_equal m_i.(3).(2) (Float.div (-160.0) 532.0) &&
+  f_equal m_i.(2).(3) (Float.div 105.0 532.0) &&
+
+  Matrix.row_equal m_i.(0) [|0.21805; 0.45113;  0.24060; -0.04511|] &&
+  Matrix.row_equal m_i.(1) [|-0.80827; -1.45677;  -0.44361; 0.52068|] &&
+  Matrix.row_equal m_i.(2) [|-0.07895; -0.22368;  -0.05263; 0.19737|] &&
+  Matrix.row_equal m_i.(3) [|-0.52256; -0.81391;  -0.30075; 0.30639|]
+let%test "Scenario: Calculating the inverse of a matrix (parallel)" = 
+  let m = Matrix.init 4 4 in
+
+  let () = m.(0) <- [|-5.0; 2.0; 6.0; -8.0|]
+  and () = m.(1) <- [|1.0; -5.0; 1.0; 8.0|]
+  and () = m.(2) <- [|7.0; 7.0; -6.0; -7.0|]
+  and () = m.(3) <- [|1.0; -3.0; 7.0; 4.0|] in
+
+  let pool = Domainslib.Task.setup_pool ~num_domains:4 () in
+
+  let d = Domainslib.Task.run pool (fun () -> Matrix.det_parallel pool m)
+  and c1 = Domainslib.Task.run pool (fun () -> Matrix.cofactor_parallel pool m ~row:2 ~col:3)
+  and c2 = Domainslib.Task.run pool (fun () -> Matrix.cofactor_parallel pool m ~row:3 ~col:2)
+  and m_i = Domainslib.Task.run pool (fun () -> Matrix.invert_parallel pool m) in
+
+  Domainslib.Task.teardown_pool pool;
+
+  f_equal d 532.0 &&
+  f_equal c1 (-160.0) &&
+  f_equal c2 105.0 &&
 
   f_equal m_i.(3).(2) (Float.div (-160.0) 532.0) &&
   f_equal m_i.(2).(3) (Float.div 105.0 532.0) &&

@@ -1,5 +1,5 @@
 (library
  (name matrix)
- (libraries tuple color)
+ (libraries tuple color domainslib)
  (inline_tests)
  (preprocess (pps ppx_inline_test)))

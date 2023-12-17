@@ -66,6 +66,53 @@ let check_intersection (shape: 'a Geometry.shape) (ry) : 'a Intersection.t array
     let i2 = Intersection.init ~t:t2 ~o:sp_ref in
     [|i1; i2|]
 
+let check_intersection_pooled (shape: 'a Geometry.shape) (ry) : 'a Intersection.t array = 
+  let centroid = Geometry.centroid ~s:shape in
+  let shape_trans = Geometry.get_transform shape in
+  (* let pool = Option.get (Domainslib.Task.lookup_pool "ray") in *)
+  (* let ray_trans = Domainslib.Task.run pool (fun () -> Matrix.invert_parallel pool !shape_trans) in *)
+  (* let ray_trans = Domainslib.Task.run pool (fun () -> Matrix.invert_parallel !shape_trans) in *)
+  let ray_trans = Matrix.invert_parallel !shape_trans in
+  let ry = transform ry ray_trans in
+  let (ray_origin, ray_dir) = (origin ry, direction ry) in
+  let vec_to_centroid = Tuple.sub ray_origin centroid in
+  let a = Tuple.dot ray_dir ray_dir in
+  let b = Float.mul 2.0 (Tuple.dot (direction ry) vec_to_centroid) in
+  let c = Float.sub (Tuple.dot vec_to_centroid vec_to_centroid) 1.0 in
+  let discriminant = Float.sub (Float.pow b 2.0) (Float.mul 4.0 (Float.mul a c)) in
+  if discriminant < 0.0 then (Array.make 0 (Intersection.init ~t:0.0 ~o:(ref (Geometry.Formless))))
+  else
+    let sp_ref = ref shape in
+    let twice_a = Float.mul 2.0 a in
+    let disc_sq = Float.sqrt discriminant in
+    let t1 = Float.div (Float.sub (Float.neg b) disc_sq) twice_a in
+    let i1 = Intersection.init ~t:t1 ~o:sp_ref in
+    let t2 = Float.div (Float.add (Float.neg b) disc_sq) twice_a in
+    let i2 = Intersection.init ~t:t2 ~o:sp_ref in
+    [|i1; i2|]
+
+let check_intersection_parallel (pool: Domainslib.Task.pool) (shape: 'a Geometry.shape) (ry) : 'a Intersection.t array = 
+  let centroid = Geometry.centroid ~s:shape in
+  let shape_trans = Geometry.get_transform shape in
+  let ray_trans = Domainslib.Task.run pool (fun () -> Matrix.invert_parallel !shape_trans) in
+  let ry = transform ry ray_trans in
+  let (ray_origin, ray_dir) = (origin ry, direction ry) in
+  let vec_to_centroid = Tuple.sub ray_origin centroid in
+  let a = Tuple.dot ray_dir ray_dir in
+  let b = Float.mul 2.0 (Tuple.dot (direction ry) vec_to_centroid) in
+  let c = Float.sub (Tuple.dot vec_to_centroid vec_to_centroid) 1.0 in
+  let discriminant = Float.sub (Float.pow b 2.0) (Float.mul 4.0 (Float.mul a c)) in
+  if discriminant < 0.0 then (Array.make 0 (Intersection.init ~t:0.0 ~o:(ref (Geometry.Formless))))
+  else
+    let sp_ref = ref shape in
+    let twice_a = Float.mul 2.0 a in
+    let disc_sq = Float.sqrt discriminant in
+    let t1 = Float.div (Float.sub (Float.neg b) disc_sq) twice_a in
+    let i1 = Intersection.init ~t:t1 ~o:sp_ref in
+    let t2 = Float.div (Float.add (Float.neg b) disc_sq) twice_a in
+    let i2 = Intersection.init ~t:t2 ~o:sp_ref in
+    [|i1; i2|]
+
 let hit (iarr: 'a Intersection.t array) = let () = Array.sort Intersection.compare iarr in
   Array.find_opt (fun e -> Intersection.t_value e > 0.0) iarr
 

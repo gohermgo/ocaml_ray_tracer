@@ -33,6 +33,16 @@ let check_intersections world ray =
   let a = Array.fold_left (fun acc e -> Array.append acc (Ray.check_intersection e ray)) [||] (objects world) in
   Array.sort Ray.Intersection.compare a;
   a
+
+let check_intersections_pooled world ray =
+  let a = Array.fold_left (fun acc e -> Array.append acc (Ray.check_intersection_pooled e ray)) [||] (objects world) in
+  Array.sort Ray.Intersection.compare a;
+  a
+
+let check_intersections_parallel (pool: Domainslib.Task.pool) world ray =
+  let a = Array.fold_left (fun acc e -> Array.append acc (Domainslib.Task.run pool (fun () -> Ray.check_intersection_parallel pool e ray))) [||] (objects world) in
+  Array.sort Ray.Intersection.compare a;
+  a
     
 let shade_hit world comps =
   let hit_point = Ray.Comps.point comps
@@ -88,3 +98,15 @@ let color_at world ray =
   Array.fold_left fold_fun (Color.init (0.0, 0.0, 0.0)) cs*)
 (*Array.map (fun o -> Ray.check_intersection 
   let comps = Ray.precompute*)
+let color_at_pooled world ray =
+  let intersections = check_intersections_pooled world ray in 
+  (* let intersections = check_intersections_pooled pool world ray in *)
+  match Ray.hit intersections with
+    | Some(hit) -> shade_hit world (Ray.precompute hit ray)
+    | None -> Color.init (0.0, 0.0, 0.0)
+
+let color_at_parallel (pool: Domainslib.Task.pool) world ray =
+  let intersections = Domainslib.Task.run pool (fun () -> check_intersections_parallel pool world ray) in
+  match Ray.hit intersections with
+    | Some(hit) -> shade_hit world (Ray.precompute hit ray)
+    | None -> Color.init (0.0, 0.0, 0.0)

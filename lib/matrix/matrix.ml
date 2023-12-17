@@ -19,6 +19,9 @@ let equal m1 m2 =
     | _ -> true in
   aux 0
 
+module D = Domain
+module DL = Domainslib
+module T = DL.Task
 
 let ident dim = 
   let m = init dim dim in
@@ -44,32 +47,51 @@ let print m = let nrows = Array.length m in
     print_newline ()
   done  
 
+let get_col (m : float array array) (col_idx: int) = 
+  let row_length = Array.length m in
+  Array.init row_length (fun row_idx -> m.(row_idx).(col_idx))
 
-let get_col matrix col_idx = let row_length = Array.length matrix in
-  Array.init row_length (fun row_idx -> matrix.(row_idx).(col_idx))
+let a_sum : float array -> float = 
+  Array.fold_left (+.) 0.0;;
 
-let a_sum = Array.fold_left (+.) 0.0;;
+let a_mul : float array -> float array -> float array  = 
+  Array.map2 (fun row_e col_e -> Float.mul row_e col_e);;
 
-let a_mul = Array.map2 (fun row_e col_e -> Float.mul row_e col_e);;
+let aux_mul (row: float array) (col: float array) : float = 
+  Tuple.sum_of (a_mul row col)
   
 let mul m1 m2 = 
-  let (nrows1, ncols1), (nrows2, ncols2) = (dim_of m1), (dim_of m2) in
+  let (nrows1, ncols1), (nrows2, ncols2) = (dim_of m1), (dim_of m2) in assert (ncols1 == nrows2);
   (*let (nrows2, ncols2) = dim_of m2 in*)
-  assert (ncols1 == nrows2);
-  let m = init nrows1 ncols2
-  and aux row_array col_array = Tuple.sum_of (a_mul row_array col_array) in
+  let m = init nrows1 ncols2 and aux row_array col_array = Tuple.sum_of (a_mul row_array col_array) in
   (* Row 1 in m1 * Col 1 in m2, Row 1 in m1 * Col 2 in m2 ... *)
   let () = for row=0 to ncols1 - 1 do
-    for col=0 to nrows2 - 1 do
+    for col = 0 to nrows2 - 1 do
       m.(row).(col) <- aux m1.(row) (get_col m2 col)
     done
   done in m
+
+let mul_parallel (pool: T.pool) (m1: float array array) (m2: float array array) =
+  let (nrows1, ncols1), (nrows2, ncols2) = (dim_of m1), (dim_of m2) in assert (ncols1 == nrows2);
+  let m = init nrows1 ncols2 in
+  (*
+  let body = fun row ->
+    for col = 0 to nrows2 - 1 do
+      m.(row).(col) <- aux_mul m1.(row) (get_col m2 col)
+    done
+  in
+  *)
+  T.parallel_for pool ~start:0 ~finish:(ncols1 - 1) ~body:(fun row ->
+    for col = 0 to nrows2 - 1 do
+      m.(row).(col) <- aux_mul m1.(row) (get_col m2 col)
+    done );
+  m
  
 
 let mul_tuple m t = let (nrows, ncols) = dim_of m in
   let () = assert (nrows == 4 && ncols == 4) in
   let a = [|Tuple.x t; Tuple.y t; Tuple.z t; Tuple.w t|] in
-  let a_res = Array.map (fun m_arr -> a_sum(a_mul m_arr a)) m in
+  let a_res = Array.map (fun m_arr -> a_sum ( a_mul m_arr a ) ) m in
   let t_res = Tuple.init (a_res.(0), a_res.(1), a_res.(2), a_res.(3)) in
   t_res
     
@@ -113,6 +135,43 @@ let submat m omit_row omit_col = let (nrows, ncols) = dim_of m in
             m_r.(sub_row).(sub_col) <- m.(row).(col)
       done;
   done;
+  m_r
+
+let submat_parallel (pool: T.pool) (m: t) ~omit_row:(omit_row: int) ~omit_col:(omit_col: int) : float array array =
+  let (nrows, ncols) = dim_of m in
+  let m_r = init (nrows - 1) (ncols - 1) in
+  (*
+  let body_inner = fun row col ->
+    let sub_row =
+      if row > omit_row then row - 1 else row in
+    for col = 0 to ncols - 1 do
+      if col == omit_col then ()
+      else let sub_col = if col > omit_col then col - 1 else col in
+      m_r.(sub_row).(sub_col) <- m.(row).(col)
+    done
+  in
+  
+  let body = fun row ->
+    if row == omit_row then ()
+    else let sub_row = if row > omit_row then row - 1 else row in
+    for col = 0 to ncols - 1 do
+      if col == omit_col then ()
+      else 
+      let sub_col = if col > omit_col then col - 1 else col in
+      m_r.(sub_row).(sub_col) <- m.(row).(col)
+    done
+  in
+  *)
+  T.parallel_for pool ~start:0 ~finish:(nrows - 1) ~body:(fun row ->
+    if row == omit_row then ()
+    else let sub_row = if row > omit_row then row - 1 else row in
+    for col = 0 to ncols - 1 do
+      if col == omit_col then ()
+      else 
+      let sub_col = if col > omit_col then col - 1 else col in
+      m_r.(sub_row).(sub_col) <- m.(row).(col)
+    done
+  );
   m_r
 
 (* This is somehow slower still * 
@@ -184,6 +243,32 @@ let%test "Scenario: Calculating a minor of a 3x3 matrix" = let m = init 3 3 in
   let m_s = submat m 1 0 in
   f_equal (det_2 m_s) 25.0 && f_equal (minor_3 m 1 0) 25.0
 
+let minor_3_parallel (pool: T.pool) (m: t) ~row:(row_idx: int) ~col:(col_idx:int) =
+  let (nrows, ncols) = dim_of m in assert (nrows == 3 && ncols == 3);
+  let m_sub = T.run pool (fun () -> submat_parallel pool m ~omit_row:row_idx ~omit_col:col_idx) in
+  det_2 m_sub
+  (*
+  det_2 (submat_parallel pool m ~omit_row:row_idx ~omit_col:col_idx)
+  *)
+
+let%test "Scenario: Calculating a minor of a 3x3 matrix (parallel)" = let m = init 3 3 in
+  let () = m.(0) <- [|3.0; 5.0; 0.0|]   
+  and () = m.(1) <- [|2.0; -1.0; -7.0|]
+  and () = m.(2) <- [|6.0; -1.0; 5.0|]
+  and pool = T.setup_pool ~num_domains:4 () in
+  let m_sub = T.run pool (fun () -> submat_parallel pool m ~omit_row:1 ~omit_col:0)
+  (*
+  T.teardown_pool pool;
+  let pool = T.setup_pool ~num_domains:4 () in
+  *)
+  and m_minor = T.run pool (fun () -> minor_3_parallel pool m ~row:1 ~col:0) in
+
+  (*
+  let m_minor = minor_3_parallel pool m ~row:1 ~col:0 in
+  *)
+  T.teardown_pool pool;
+  f_equal (det_2 m_sub) 25.0 && f_equal m_minor 25.0
+
 let is_odd n = n mod 2 != 0
 
 let cofactor_3 m row_idx col_idx = let (nrows, ncols) = dim_of m in assert (nrows == 3 && ncols == 3);
@@ -205,11 +290,43 @@ let%test "Scenario: Calculating a cofactor of a 3x3 matrix" =
   f_equal (minor_3 m 1 0) (25.0) &&
   f_equal (cofactor_3 m 1 0)(-25.0)
 
+
+let cofactor_3_parallel (pool: T.pool) (m: t) ~row:(row_idx: int) ~col:(col_idx: int) : float =
+  let (nrows, ncols) = dim_of m in assert (nrows == 3 && ncols == 3);
+  let m_minor = T.run pool (fun () -> minor_3_parallel pool m ~row:row_idx ~col:col_idx) in
+  if is_odd (row_idx + col_idx) then Float.neg m_minor else m_minor
+
+let%test "Scenario: Calculating a cofactor of a 3x3 matrix (parallel)" = 
+  let m = init 3 3 in
+
+  let () = m.(0) <- [|3.0; 5.0; 0.0|]
+  and () = m.(1) <- [|2.0; -1.0; -7.0|]
+  and () = m.(2) <- [|6.0; -1.0; 5.0|]
+  and pool = T.setup_pool ~num_domains:4 () in
+
+  let m_1 = T.run pool (fun () -> minor_3_parallel pool m ~row:0 ~col:0)
+  and m_2 = T.run pool (fun () -> minor_3_parallel pool m ~row:1 ~col:0)
+  and c_1 = T.run pool (fun () -> cofactor_3_parallel pool m ~row:0 ~col:0)
+  and c_2 = T.run pool (fun () -> cofactor_3_parallel pool m ~row:1 ~col:0) in
+  
+  f_equal m_1 (-12.0) &&
+  f_equal c_1 (-12.0) &&
+  f_equal m_2 (25.0) &&
+  f_equal c_2 (-25.0)
+
 let det_n m n f =
   let (nrows, ncols) = dim_of m in assert (nrows == n && ncols == n);
   let rec det' = function
     | col when col < ncols -> m.(0).(col) *. (f m 0 col) +. det' (col + 1)
     | _ -> 0.0 in det' 0
+
+let det_n_parallel (pool: T.pool) (m: t) (n: int) (f: T.pool -> t -> row:int -> col:int -> float) =
+  let (nrows, ncols) = dim_of m in assert (nrows == n && ncols == n);
+  let rec det' = function
+    | col when col < ncols -> let f_res = T.run pool (fun () -> f pool m ~row:0 ~col:col) in
+      m.(0).(col) *. f_res +. det' (col + 1)
+    | _ -> 0.0 in
+  det' 0
 
 let det_3 m = det_n m 3 cofactor_3
   (*let (nrows, ncols) = dim_of m in assert (nrows == 3 && ncols == 3);
@@ -222,6 +339,7 @@ let det_3 m = det_n m 3 cofactor_3
     let new_det = !det_res +. m.(0).(col) *. (cofactor_3 m 0 col) in
     det_res := new_det
   done in !det_res*)
+let det_3_parallel (pool: T.pool) (m: t) = det_n_parallel pool m 3 cofactor_3_parallel
 
 (* Test kept here to keep det_3 from interface *)
 let%test "Calculating the determinant of a 3x3 matrix" = 
@@ -237,6 +355,12 @@ let%test "Calculating the determinant of a 3x3 matrix" =
 let minor m row_idx col_idx = let (nrows, ncols) = dim_of m in assert (nrows == ncols);
   if nrows == 3 then minor_3 m row_idx col_idx else det_3 (submat m row_idx col_idx)
 
+let minor_parallel (pool: T.pool) (m: t) ~row:(row_idx: int) ~col:(col_idx: int) =
+  let (nrows, ncols) = dim_of m in assert (nrows == ncols);
+  if nrows == 3 then T.run pool (fun () -> minor_3_parallel pool m ~row:row_idx ~col:col_idx)
+  else
+  let m_sub = T.run pool (fun () -> submat_parallel pool m ~omit_row:row_idx ~omit_col:col_idx) in
+  T.run pool (fun () -> det_3_parallel pool m_sub)
 
 let cofactor m row_idx col_idx = 
   let (nrows, ncols) = dim_of m in assert (nrows == ncols && nrows > 2);
@@ -249,7 +373,15 @@ let cofactor m row_idx col_idx =
   then Float.neg m_minor
   else m_minor*)
 
-let det m = 
+let cofactor_parallel (pool: T.pool) (m: t) ~row:(row_idx: int) ~col:(col_idx: int) : float = 
+  let (nrows, ncols) = dim_of m in assert (nrows == ncols && nrows > 2);
+  if nrows == 3 then T.run pool (fun () -> cofactor_3_parallel pool m ~row:row_idx ~col:col_idx) else
+  (*let dim_sum = row_idx + col_idx in*)
+  (*let should_negate = (row_idx + col_idx) mod 2 != 0 in*)
+  let m_minor = T.run pool (fun () -> minor_parallel pool m ~row:row_idx ~col:col_idx) in
+  if is_odd (row_idx + col_idx) then Float.neg m_minor else m_minor
+
+let _unused_det m = 
   let (nrows, ncols) = dim_of m in assert (nrows == ncols);
   (* We can assume nrows == ncols here *)
   if nrows == 2 then det_2 m else 
@@ -277,6 +409,16 @@ let det_3 m = det_n m 3 cofactor_3
 let minor m row_idx col_idx = let (nrows, ncols) = dim_of m in assert (nrows == ncols);
   if nrows == 3 then minor_3 m row_idx col_idx else det_3 (submat m row_idx col_idx)
 *)
+let det_parallel (pool: T.pool) (m: t) = 
+  let (nrows, ncols) = dim_of m in assert (nrows == ncols);
+  (* We can assume nrows == ncols here *)
+  if nrows == 2 then det_2 m else 
+  if nrows == 3 then T.run pool (fun () -> det_3_parallel pool m) else
+  let rec aux = function
+    | col when col < ncols -> let c = T.run pool (fun () -> cofactor_parallel pool m ~row:0 ~col:col) in
+      m.(0).(col) *. c +. aux (col + 1)
+    | _ -> 0.0 in
+  aux 0
 let rec _minor m row col =
   let (nrows, ncols) = dim_of m in assert (nrows == ncols);
   if (nrows == 3) then let m' = _submat m row col in 
@@ -300,7 +442,7 @@ let _cofactor m row col =
     if is_odd (row + col) then Float.neg m' else m'
   else*)
 
-let _det m =
+let det m =
   let (nrows, ncols) = dim_of m in assert (nrows == ncols);
   let det' = ref 0.0 in
   if nrows == 2 then det' := (m.(0).(0) *. m.(1).(1)) -. (m.(0).(1) *. m.(1).(0))
@@ -309,14 +451,18 @@ let _det m =
   done; 
   !det'
 
-let is_invertible m = not (f_equal (_det m) 0.0)
-let _is_invertible m = let d = _det m in
+let is_invertible m = not (f_equal (det m) 0.0)
+let is_invertible_parallel (pool: T.pool) (m: t) =
+  let d = T.run pool (fun () -> det_parallel pool m) in
+  not (f_equal d 0.0)
+
+let _is_invertible m = let d = det m in
   (not (f_equal d 0.0), d)
 
 let invert m = (*let () = assert (is_invertible m) in
   let d = _det m in*)
   (*let (invertible, d) = _is_invertible m in assert invertible;*)
-  let d = _det m in
+  let d = det m in
   (* Assert matrix is invertible *)
   assert (not (f_equal d 0.0));
   let (nrows, ncols) = dim_of m in
@@ -328,12 +474,50 @@ let invert m = (*let () = assert (is_invertible m) in
   done in
   m_i
 
+let invert_parallel (m: t) =
+  let pool = Option.get (T.lookup_pool "matrix") in
+  (* let d = T.run pool (fun () -> det_parallel pool m) in assert (not (f_equal d 0.0)); *)
+  let d = det_parallel pool m in assert (not (f_equal d 0.0));
+  let (nrows, ncols) = dim_of m in
+  let m_i = init nrows ncols in
+  (*
+  T.run pool (fun () -> T.parallel_for pool ~start:0 ~finish:(nrows - 1) ~body:(fun row ->
+    for col = 0 to ncols - 1 do
+      (* let c = T.run pool (fun () -> cofactor_parallel pool m ~row:row ~col:col) in *)
+      let c = cofactor_parallel pool m ~row:row ~col:col in
+      m_i.(col).(row) <- Float.div c d
+    done )); 
+  *)
+  T.parallel_for pool ~start:0 ~finish:(nrows - 1) ~body:(fun row ->
+    for col = 0 to ncols - 1 do
+      (* let c = T.run pool (fun () -> cofactor_parallel pool m ~row:row ~col:col) in *)
+      let c = cofactor_parallel pool m ~row:row ~col:col in
+      m_i.(col).(row) <- Float.div c d
+    done );
+  m_i
+
 let%test "Scenario: A submatrix of a 3x3 matrix is a 2x2 matrix" = 
   let m = init 3 3 in
   let () = m.(0) <- [|1.0; 5.0; 0.0|] 
   and () = m.(1) <- [|-3.0; 2.0; 7.0|]
   and () = m.(2) <- [|0.0; 6.0; -3.0|] in
   let m_sub = submat m 0 2 in
+  let (nrows, ncols) = dim_of m_sub in (*(Array.length m_sub, Array.length m_sub.(0)) in*)
+  nrows == 2 && ncols == 2 &&
+  row_equal m_sub.(0) [|-3.0; 2.0|] &&
+  row_equal m_sub.(1) [|0.0; 6.0|]
+
+let%test "Scenario: A submatrix of a 3x3 matrix is a 2x2 matrix (parallel)" = 
+  let m = init 3 3 in
+
+  let () = m.(0) <- [|1.0; 5.0; 0.0|] 
+  and () = m.(1) <- [|-3.0; 2.0; 7.0|]
+  and () = m.(2) <- [|0.0; 6.0; -3.0|]
+  and pool = T.setup_pool ~num_domains:4 () in
+
+  let m_sub = T.run pool (fun () -> submat_parallel pool m ~omit_row:0 ~omit_col:2) in
+  T.teardown_pool pool;
+
   let (nrows, ncols) = dim_of m_sub in (*(Array.length m_sub, Array.length m_sub.(0)) in*)
   nrows == 2 && ncols == 2 &&
   row_equal m_sub.(0) [|-3.0; 2.0|] &&
@@ -365,7 +549,7 @@ let%test "Calculating the determinant of a 4x4 matrix" =
   f_equal (_cofactor m 0 1) 447.0 &&
   f_equal (_cofactor m 0 2) 210.0 &&
   f_equal (_cofactor m 0 3) 51.0 &&
-  f_equal (_det m) (-4071.0)
+  f_equal (det m) (-4071.0)
 
 (* Intersion tests *)
 
@@ -375,7 +559,7 @@ let%test "Scenario: Testing an invertible matrix for invertibility" =
   and () = m.(1) <- [|5.0; 5.0; 7.0; 6.0|] 
   and () = m.(2) <- [|4.0; -9.0; 3.0; -7.0|] 
   and () = m.(3) <- [|9.0; 1.0; 7.0; -6.0|] in
-  f_equal (_det m) (-2120.0) && 
+  f_equal (det m) (-2120.0) && 
   is_invertible m 
 
 let%test "Scenario: Testing a noninvertible matrix for invertibility" = 
@@ -384,7 +568,7 @@ let%test "Scenario: Testing a noninvertible matrix for invertibility" =
   and () = m.(1) <- [|9.0; 6.0; 2.0; 6.0|] 
   and () = m.(2) <- [|0.0; -5.0; 1.0; -5.0|] 
   and () = m.(3) <- [|0.0; 0.0; 0.0; 0.0|] in
-  f_equal (_det m) 0.0 && 
+  f_equal (det m) 0.0 && 
   not (is_invertible m)
 
 let%test "Scenario: Calculating the inverse of a matrix" = 
@@ -395,7 +579,7 @@ let%test "Scenario: Calculating the inverse of a matrix" =
   and () = m.(2) <- [|7.0; 7.0; -6.0; -7.0|]
   and () = m.(3) <- [|1.0; -3.0; 7.0; 4.0|] in
 
-  f_equal (_det m) 532.0 &&
+  f_equal (det m) 532.0 &&
   f_equal (_cofactor m 2 3) (-160.0) &&
   f_equal (_cofactor m 3 2) 105.0 &&
 

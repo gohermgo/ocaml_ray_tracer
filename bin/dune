@@ -2,5 +2,5 @@
  (public_name ocaml_ray_tracer)
  (name main)
  (libraries ray_lib)
- (ocamlopt_flags -g -O3)
- (ocamlc_flags -g))
+ (ocamlopt_flags -I +unix -I +threads -g -O3)
+ (ocamlc_flags -I +unix -I +threads -g))

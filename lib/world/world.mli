@@ -8,7 +8,10 @@ val lights: 'a t -> 'a Light.t array
 val set_light: 'a t -> int -> 'a Light.t -> unit
 
 val check_intersections: 'a t -> Ray.t -> 'a Ray.Intersection.t array
+val check_intersections_parallel: Domainslib.Task.pool -> 'a t -> Ray.t -> 'a Ray.Intersection.t array
 
 val shade_hit: 'a t -> 'a Ray.Comps.t -> Color.t
 
 val color_at: 'a t -> Ray.t -> Color.t
+val color_at_pooled: 'a t -> Ray.t -> Color.t
+val color_at_parallel: Domainslib.Task.pool -> 'a t -> Ray.t -> Color.t
