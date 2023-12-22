@@ -104,7 +104,7 @@ let render_horizontal_pooled y bound camera image world =
     let ray = ray_for_pixel camera x y in
     (* let c = World.color_at_pooled pool world ray in *)
     (* let c = T.run pool (fun () -> World.color_at_pooled pool world ray) in *)
-    let c = World.color_at_pooled world ray in
+    let c = World.color_at world ray in
     Canvas.write_pixel image ~x_idx:x ~y_idx:y ~color:c
   done
 
@@ -147,6 +147,16 @@ let render_parallel c w =
     render_horizontal_pooled y (hsize - 1) c image w;
   );
   print_newline ();
+  image
+
+let render_in_pool (pool: T.pool) (c: t) (w: 'a World.t) : Canvas.t =
+  print_endline "render in pool";
+  let (hsize, vsize) = (hsize c, vsize c) in
+  let image = Canvas.init ~width:hsize ~height:vsize in
+  T.parallel_for pool ~start:0 ~finish:(vsize - 1) ~body:(fun y ->
+    render_horizontal_pooled y (hsize - 1) c image w;
+  );
+  print_endline "render in pool finished";
   image
 
 let render pool c w =

@@ -19,4 +19,5 @@ val ray_for_pixel: t -> int -> int -> Ray.t
 
 val render_parallel: t -> 'a World.t -> Canvas.t
 val render_pooled: t -> 'a World.t -> Canvas.t
+val render_in_pool: Domainslib.Task.pool -> t -> 'a World.t -> Canvas.t
 val render: Domainslib.Task.pool -> t -> 'a World.t -> Canvas.t
