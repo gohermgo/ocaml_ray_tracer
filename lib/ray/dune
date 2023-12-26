@@ -3,3 +3,6 @@
  (libraries geometry sphere transformation matrix tuple color)
  (inline_tests)
  (preprocess (pps ppx_inline_test)))
+(env
+ (dev
+  (flags (:standard -w -32))))

@@ -98,8 +98,11 @@ let mul_tuple m t = let (nrows, ncols) = dim_of m in
 
 
   
-let transpose m = let nrows = Array.length m in
+let transpose m = let (nrows, ncols) = dim_of m in
+  (*
+  let nrows = Array.length m in
   let ncols = Array.length m.(0) in
+  *)
   (* Note the inversion in the next statement *)
   let res = init ncols nrows in
   let () = for i=0 to ncols - 1 do

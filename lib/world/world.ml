@@ -50,7 +50,7 @@ let shade_hit world comps =
   and hit_normalv = Ray.Comps.normalv comps
   and hit_object = Ray.Comps.object_pointer comps in
   let hit_material = Geometry.get_material !hit_object in
-  Array.fold_left (fun color_acc light -> Color.add color_acc (Light.lighting !hit_material light hit_point hit_eyev hit_normalv)) (Color.init (0.0, 0.0, 0.0)) (lights world)
+  Array.fold_left (fun color_acc light -> Color.add_ color_acc (Light.lighting !hit_material light hit_point hit_eyev hit_normalv)) (Color.init (0.0, 0.0, 0.0)) (lights world)
 let color_at world ray =
   (*let is = check_intersections world ray in*)
   (*print_string "Intersection count ";

@@ -34,7 +34,7 @@ let%test "Shading an intersection" =
   let i = Ray.Intersection.init ~t:4.0 ~o:s in
   let cs = Ray.precompute i r in
   let colr = World.shade_hit w cs in
-  Color.equal colr (Color.init(0.38066, 0.47583, 0.2855))
+  Color.equal_ colr (Color.init(0.38066, 0.47583, 0.2855))
 
 let%test "Shading an intersection from the inside" =
   let w = World.init_def ()
@@ -46,7 +46,7 @@ let%test "Shading an intersection from the inside" =
   let i = Ray.Intersection.init ~t:0.5 ~o:s in
   let cs = Ray.precompute i r in
   let colr = World.shade_hit w cs in
-  Color.equal colr (Color.init(0.90498, 0.90498, 0.90498))
+  Color.equal_ colr (Color.init(0.90498, 0.90498, 0.90498))
   
 let%test "The color when a ray misses" = 
   let w = World.init_def ()
@@ -58,7 +58,7 @@ let%test "The color when a ray misses" =
   print_newline ();
   print_float (Color.b c);
   print_newline ();*)
-  Color.equal c (Color.init(0.0, 0.0, 0.0))
+  Color.equal_ c (Color.init(0.0, 0.0, 0.0))
 
 let%test "The color when a ray hits" = 
   let w = World.init_def ()
@@ -70,7 +70,7 @@ let%test "The color when a ray hits" =
   print_newline ();
   print_float (Color.b c);
   print_newline ();*)
-  Color.equal c (Color.init(0.38066, 0.47583, 0.2855))
+  Color.equal_ c (Color.init(0.38066, 0.47583, 0.2855))
 
 let%test "The color with an intersection behind the ray" = 
   let w = World.init_def ()
@@ -98,7 +98,7 @@ let%test "The color with an intersection behind the ray" =
   print_string "Ambient ";
   print_float (Material.ambient !(Geometry.get_material inner));
   print_newline();*)
-  Color.equal c (Material.color !(Geometry.get_material inner))
+  Color.equal_ c (Material.color !(Geometry.get_material inner))
  (* let s = ref (World.objects w).(0) in
   let i = Ray.Intersection.init ~t:4.0 ~o:s in
   let cs = Ray.precompute i r in

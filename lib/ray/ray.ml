@@ -19,6 +19,20 @@ module Intersection = struct
   let init ~(t:float) ~(o:'a Geometry.shape ref) = {t_value = t; o = o}
   let t_value i = i.t_value
   let object_pointer i = i.o
+  let equal_parametric i1 i2 =
+    let (t1, t2) = (t_value i1, t_value i2) in f_equal t1 t2
+  let equal_value i1 i2 = 
+    let (o1, o2) = (object_pointer i1, object_pointer i2) in 
+    (* Check for structural equality *)
+    o1 = o2
+  let equal_instance i1 i2 = 
+    let (o1, o2) = (object_pointer i1, object_pointer i2) in 
+    (* Check pointing to same object *)
+    o1 == o2
+  let is_equal i1 i2 =
+    equal_parametric i1 i2 &&
+    equal_value i1 i2 &&
+    equal_instance i1 i2
   let equal i1 i2 = f_equal (t_value i1) (t_value i2) &&
     (* Check pointing to same object *)
     (object_pointer i1) == (object_pointer i2) &&
@@ -40,9 +54,10 @@ module Comps = struct
   let inside c = c.inside
 end
 
-let transform (r_i: t) (m: Matrix.t) : t = let o_new = Matrix.mul_tuple m (origin r_i) in
-  let d_new = Matrix.mul_tuple m (direction r_i) in
-  init ~origin:o_new ~direction:d_new
+let transform (r_i: t) (m: Matrix.t) : t = 
+  let new_origin = Matrix.mul_tuple m (origin r_i) in
+  let new_direct = Matrix.mul_tuple m (direction r_i) in
+  init ~origin:new_origin ~direction:new_direct
 
 let check_intersection (shape: 'a Geometry.shape) (ry) : 'a Intersection.t array = 
   let centroid = Geometry.centroid ~s:shape in

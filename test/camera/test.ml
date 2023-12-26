@@ -45,4 +45,4 @@ let%test "Rendering a world with a camera" =
   let pool = Domainslib.Task.setup_pool ~num_domains:4 () in
   let image = Domainslib.Task.run pool (fun () -> Camera.render pool c w) in
   Domainslib.Task.teardown_pool pool;
-  Color.equal !(Option.get (Canvas.pixel_at image ~x_idx:5 ~y_idx:5)) (Color.init (0.38066, 0.47583, 0.2855))
+  Color.equal_ !(Option.get (Canvas.pixel_at image ~x_idx:5 ~y_idx:5)) (Color.init (0.38066, 0.47583, 0.2855))

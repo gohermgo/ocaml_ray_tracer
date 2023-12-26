@@ -293,7 +293,7 @@ let%test "Scenario: Calculating the inverse of a matrix (parallel)" =
   let d = Domainslib.Task.run pool (fun () -> Matrix.det_parallel pool m)
   and c1 = Domainslib.Task.run pool (fun () -> Matrix.cofactor_parallel pool m ~row:2 ~col:3)
   and c2 = Domainslib.Task.run pool (fun () -> Matrix.cofactor_parallel pool m ~row:3 ~col:2)
-  and m_i = Domainslib.Task.run pool (fun () -> Matrix.invert_parallel pool m) in
+  and m_i = Domainslib.Task.run pool (fun () -> Matrix.invert_parallel m) in
 
   Domainslib.Task.teardown_pool pool;
 
